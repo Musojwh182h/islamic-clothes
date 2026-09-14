@@ -55,7 +55,11 @@ export default function App() {
 
   useEffect(() => {
     const storedItems: StoredCartItem[] = cartItems.map(({ id, size, quantity }) => ({ id, size, quantity }))
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(storedItems))
+    if (storedItems.length === 0) {
+      localStorage.removeItem(CART_STORAGE_KEY)
+    } else {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(storedItems))
+    }
   }, [cartItems])
 
   useEffect(() => {
@@ -139,7 +143,7 @@ export default function App() {
       {notice && <div className="toast" role="status">{notice}</div>}
       <CartDrawer items={cartItems} isOpen={isCartOpen} onClose={() => setCartOpen(false)} onChangeQuantity={changeQuantity} onRemove={removeItem} onCheckout={openCheckout} />
       <CheckoutDialog items={cartItems} isOpen={isCheckoutOpen} orderNumber={orderNumber} onBack={() => { setCheckoutOpen(false); setCartOpen(true) }} onClose={() => setCheckoutOpen(false)} onSubmit={placeOrder} />
-      <AuthDialog isOpen={isAuthOpen} user={authUser} onClose={() => setAuthOpen(false)} onAuthenticated={user => { setAuthUser(user); setAuthOpen(false) }} onLoggedOut={() => { setAuthUser(null); setAuthOpen(false) }} />
+      <AuthDialog isOpen={isAuthOpen} user={authUser} onClose={() => setAuthOpen(false)} onAuthenticated={user => { setAuthUser(user); setAuthOpen(false) }} onLoggedOut={() => { setAuthUser(null); setCartItems([]); setAuthOpen(false) }} />
     </main>
   )
 }
