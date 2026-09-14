@@ -1,0 +1,106 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-catalog_db}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-production}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5433:5432"
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "6380:6379"
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: app
+      RABBITMQ_DEFAULT_PASS: ${POSTGRES_PASSWORD:-change-me-in-production}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+
+  catalog-api:
+    build:
+      context: ./services/catalog-service
+    environment:
+      DATABASE_URL: ${CATALOG_DATABASE_URL:-postgresql+asyncpg://app:change-me-in-production@postgres:5432/catalog_db}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://app:change-me-in-production@rabbitmq:5672/}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173}
+    volumes:
+      - ./services/catalog-service:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8101:8000"
+
+  auth-api:
+    build:
+      context: ./services/auth-service
+    environment:
+      DATABASE_URL: ${AUTH_DATABASE_URL:-postgresql+asyncpg://app:change-me-in-production@postgres:5432/auth_db}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://app:change-me-in-production@rabbitmq:5672/}
+    volumes:
+      - ./services/auth-service:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8102:8000"
+
+  orders-api:
+    build:
+      context: ./services/order-service
+    environment:
+      DATABASE_URL: ${ORDERS_DATABASE_URL:-postgresql+asyncpg://app:change-me-in-production@postgres:5432/orders_db}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://app:change-me-in-production@rabbitmq:5672/}
+    volumes:
+      - ./services/order-service:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8103:8000"
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:

@@ -1,0 +1,46 @@
+import type { Product } from '../types/product'
+
+export const products: Product[] = [
+  {
+    id: 1,
+    slug: 'kandura-sand',
+    name: 'Кандура «Песок»',
+    category: 'Кандуры',
+    price: 6490,
+    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+    image: '/images/products/kandura-sand.png',
+    tone: 'sand',
+    isNew: true,
+  },
+  {
+    id: 2,
+    slug: 'jubba-noir',
+    name: 'Джубба «Ночь»',
+    category: 'Джуббы',
+    price: 7890,
+    sizes: ['M', 'L', 'XL', 'XXL'],
+    image: '/images/products/jubba-noir.png',
+    tone: 'noir',
+  },
+  {
+    id: 3,
+    slug: 'thobe-olive',
+    name: 'Тоб «Олива»',
+    category: 'Тобы',
+    price: 7190,
+    sizes: ['S', 'M', 'L', 'XL'],
+    image: '/images/products/thobe-olive.png',
+    tone: 'olive',
+    isNew: true,
+  },
+  {
+    id: 4,
+    slug: 'jubba-milk',
+    name: 'Джубба «Молоко»',
+    category: 'Джуббы',
+    price: 7590,
+    sizes: ['M', 'L', 'XL', 'XXL'],
+    image: '/images/products/jubba-milk.png',
+    tone: 'milk',
+  },
+]
