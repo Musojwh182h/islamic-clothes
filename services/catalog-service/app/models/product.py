@@ -53,7 +53,7 @@ class ProductImage(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     product_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("products.id", ondelete="CASCADE"), index=True)
-    url: Mapped[str] = mapped_column(String(500))
+    object_key: Mapped[str] = mapped_column(String(512))
     alt_text: Mapped[str] = mapped_column(String(240), default="")
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 

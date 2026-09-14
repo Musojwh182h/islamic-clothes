@@ -8,6 +8,7 @@ React storefront
        +-- catalog-api  ── catalog_db
        +-- auth-api     ── auth_db + Redis
        +-- orders-api   ── orders_db
+       +-- media-api    ── MinIO (S3)
        |
     RabbitMQ ── notification-worker (SMS / email)
 ```
@@ -19,6 +20,7 @@ React storefront
 | `catalog-api` | товары, варианты, размеры, остатки, изображения | `catalog_db` | публикует `catalog.product_changed` |
 | `auth-api` | номер телефона, SMS OTP, пользователи, роли, JWT | `auth_db`, Redis | публикует `auth.sms_code_requested` |
 | `orders-api` | серверная корзина, заказ, платёж, история статусов | `orders_db` | потребляет `auth.user_registered`, публикует `order.created`, `order.status_changed` |
+| `media-api` | проверка, нормализация, загрузка и удаление товарных изображений | MinIO bucket `sabr-product-media` | позже публикует `media.object_created`, `media.object_deleted` |
 | `notification-worker` | отправка SMS/email, ретраи, журнал доставки | собственное техническое хранилище при необходимости | потребляет события авторизации и заказов |
 
 ## Правила
@@ -29,10 +31,12 @@ React storefront
 4. **Деньги хранятся в копейках как `integer`,** а отображаются в рублях. Никаких `float` для цены или оплаты.
 5. **Платёжный webhook подписывается и обрабатывается идемпотентно.** Заказ меняет статус только после валидации провайдера.
 6. Админка будет отдельным клиентом с ролью `admin`; административные действия пишутся в аудит.
+7. **Файлы не хранятся в PostgreSQL.** `catalog_db` содержит только стабильный `object_key`; публичный URL формируется через настраиваемый media/CDN base URL.
+8. **Запись в MinIO выполняет только `media-api`.** Сервисный пользователь ограничен одним bucket, а HTTP-загрузка дополнительно проверяет роль через `auth-api`. Bucket допускает анонимный `GetObject`, но запрещает просмотр списка файлов и запись.
 
 ## Модели данных
 
-- `catalog_db`: `products → product_variants`, `products → product_images`.
+- `catalog_db`: `products → product_variants`, `products → product_images`; `product_images.object_key` указывает на объект MinIO и не содержит бинарных данных.
 - `orders_db`: `carts → cart_items`, `orders → order_items`, `orders → order_status_history`, `orders → payments`.
 - Заказ хранит снимок названия, SKU и цены товара: изменение каталога не меняет уже созданный заказ.
 - UUID из других сервисов сохраняются как ссылки без межбазовых foreign key — сервисы не связывают свои схемы напрямую.

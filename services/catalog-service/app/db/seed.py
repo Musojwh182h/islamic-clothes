@@ -18,7 +18,7 @@ PRODUCTS = [
         "material": "Хлопок и лён",
         "tone": "sand",
         "is_new": True,
-        "image": "/images/products/kandura-sand.png",
+        "image_object_key": "products/kandura-sand.png",
         "sizes": ["S", "M", "L", "XL", "XXL"],
     },
     {
@@ -32,7 +32,7 @@ PRODUCTS = [
         "material": "Премиальный хлопок",
         "tone": "noir",
         "is_new": False,
-        "image": "/images/products/jubba-noir.png",
+        "image_object_key": "products/jubba-noir.png",
         "sizes": ["M", "L", "XL", "XXL"],
     },
     {
@@ -46,7 +46,7 @@ PRODUCTS = [
         "material": "Мягкий хлопок",
         "tone": "olive",
         "is_new": True,
-        "image": "/images/products/thobe-olive.png",
+        "image_object_key": "products/thobe-olive.png",
         "sizes": ["S", "M", "L", "XL"],
     },
     {
@@ -60,7 +60,7 @@ PRODUCTS = [
         "material": "Хлопок и лён",
         "tone": "milk",
         "is_new": False,
-        "image": "/images/products/jubba-milk.png",
+        "image_object_key": "products/jubba-milk.png",
         "sizes": ["M", "L", "XL", "XXL"],
     },
 ]
@@ -89,7 +89,9 @@ async def seed() -> None:
                 tone=data["tone"],
                 is_new=data["is_new"],
             )
-            product.images.append(ProductImage(url=data["image"], alt_text=data["name"], sort_order=0))
+            product.images.append(
+                ProductImage(object_key=data["image_object_key"], alt_text=data["name"], sort_order=0)
+            )
             product.variants.extend(
                 ProductVariant(
                     id=variant_id(data["id"], size),

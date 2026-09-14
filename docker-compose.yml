@@ -45,6 +45,48 @@ services:
       - "5673:5672"
       - "15673:15672"
 
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-sabr-root}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-local-minio-root-password-change-me}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  minio-init:
+    image: quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-sabr-root}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-local-minio-root-password-change-me}
+      MINIO_MEDIA_ACCESS_KEY: ${MINIO_MEDIA_ACCESS_KEY:-sabr-media-service}
+      MINIO_MEDIA_SECRET_KEY: ${MINIO_MEDIA_SECRET_KEY:-local-media-service-password-change-me}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
+        mc mb --ignore-existing local/sabr-product-media
+        mc anonymous set-json /config/public-read-policy.json local/sabr-product-media
+        mc admin user add local "$${MINIO_MEDIA_ACCESS_KEY}" "$${MINIO_MEDIA_SECRET_KEY}" || true
+        mc admin policy create local media-rw /config/media-policy.json || true
+        mc admin policy attach local media-rw --user "$${MINIO_MEDIA_ACCESS_KEY}"
+        mc cp --recursive /seed/ local/sabr-product-media/products/
+    volumes:
+      - ./infra/minio/media-policy.json:/config/media-policy.json:ro
+      - ./infra/minio/public-read-policy.json:/config/public-read-policy.json:ro
+      - ./infra/minio/seed/products:/seed:ro
+    depends_on:
+      minio:
+        condition: service_healthy
+
   catalog-api:
     build:
       context: ./services/catalog-service
@@ -53,6 +95,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://app:change-me-in-production@rabbitmq:5672/}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-http://localhost:9000/sabr-product-media}
     volumes:
       - ./services/catalog-service:/app
     depends_on:
@@ -64,6 +107,26 @@ services:
         condition: service_healthy
     ports:
       - "8101:8000"
+
+  media-api:
+    build:
+      context: ./services/media-service
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_MEDIA_ACCESS_KEY:-sabr-media-service}
+      MINIO_SECRET_KEY: ${MINIO_MEDIA_SECRET_KEY:-local-media-service-password-change-me}
+      MINIO_BUCKET: sabr-product-media
+      MINIO_SECURE: "false"
+      MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-http://localhost:9000/sabr-product-media}
+      AUTH_ME_URL: http://auth-api:8000/api/v1/auth/me
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+      auth-api:
+        condition: service_started
+    ports:
+      - "8104:8000"
 
   auth-api:
     build:
@@ -120,3 +183,4 @@ volumes:
   postgres_data:
   redis_data:
   rabbitmq_data:
+  minio_data:

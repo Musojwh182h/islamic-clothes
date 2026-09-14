@@ -1,5 +1,7 @@
 import type { Product } from '../types/product'
 
+const MEDIA_PUBLIC_BASE_URL = import.meta.env.VITE_MEDIA_PUBLIC_BASE_URL ?? 'http://localhost:9000/sabr-product-media'
+
 export const products: Product[] = [
   {
     id: '11111111-1111-4111-8111-111111111111',
@@ -8,7 +10,7 @@ export const products: Product[] = [
     category: 'Кандуры',
     price: 6490,
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-    image: '/images/products/kandura-sand.png',
+    image: `${MEDIA_PUBLIC_BASE_URL}/products/kandura-sand.png`,
     tone: 'sand',
     isNew: true,
   },
@@ -19,7 +21,7 @@ export const products: Product[] = [
     category: 'Джуббы',
     price: 7890,
     sizes: ['M', 'L', 'XL', 'XXL'],
-    image: '/images/products/jubba-noir.png',
+    image: `${MEDIA_PUBLIC_BASE_URL}/products/jubba-noir.png`,
     tone: 'noir',
   },
   {
@@ -29,7 +31,7 @@ export const products: Product[] = [
     category: 'Тобы',
     price: 7190,
     sizes: ['S', 'M', 'L', 'XL'],
-    image: '/images/products/thobe-olive.png',
+    image: `${MEDIA_PUBLIC_BASE_URL}/products/thobe-olive.png`,
     tone: 'olive',
     isNew: true,
   },
@@ -40,7 +42,7 @@ export const products: Product[] = [
     category: 'Джуббы',
     price: 7590,
     sizes: ['M', 'L', 'XL', 'XXL'],
-    image: '/images/products/jubba-milk.png',
+    image: `${MEDIA_PUBLIC_BASE_URL}/products/jubba-milk.png`,
     tone: 'milk',
   },
 ]

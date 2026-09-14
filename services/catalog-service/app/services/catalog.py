@@ -1,10 +1,21 @@
+from urllib.parse import quote
+
+from app.core.config import get_settings
 from app.models.product import Product
 from app.schemas.product import ProductPreview, ProductVariantResponse
+
+settings = get_settings()
+
+
+def public_media_url(object_key: str) -> str:
+    if not object_key:
+        return ""
+    return f"{settings.media_public_base_url.rstrip('/')}/{quote(object_key, safe='/')}"
 
 
 def to_product_preview(product: Product) -> ProductPreview:
     available_variants = [variant for variant in product.variants if variant.stock_quantity > 0]
-    image = product.images[0].url if product.images else ""
+    image = public_media_url(product.images[0].object_key) if product.images else ""
     return ProductPreview(
         id=product.id,
         slug=product.slug,
