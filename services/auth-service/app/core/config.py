@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     otp_ttl_seconds: int = 300
     otp_cooldown_seconds: int = 60
     otp_max_attempts: int = 5
+    admin_phone: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

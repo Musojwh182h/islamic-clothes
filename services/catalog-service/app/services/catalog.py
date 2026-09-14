@@ -14,7 +14,9 @@ def public_media_url(object_key: str) -> str:
 
 
 def to_product_preview(product: Product) -> ProductPreview:
-    available_variants = [variant for variant in product.variants if variant.stock_quantity > 0]
+    available_variants = [
+        variant for variant in product.variants if variant.is_active and variant.stock_quantity > 0
+    ]
     image = public_media_url(product.images[0].object_key) if product.images else ""
     return ProductPreview(
         id=product.id,

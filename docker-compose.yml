@@ -94,7 +94,7 @@ services:
       DATABASE_URL: ${CATALOG_DATABASE_URL:-postgresql+asyncpg://app:change-me-in-production@postgres:5432/catalog_db}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://app:change-me-in-production@rabbitmq:5672/}
-      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
       MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-http://localhost:9000/sabr-product-media}
     volumes:
       - ./services/catalog-service:/app
@@ -119,7 +119,7 @@ services:
       MINIO_SECURE: "false"
       MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-http://localhost:9000/sabr-product-media}
       AUTH_ME_URL: http://auth-api:8000/api/v1/auth/me
-      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
     depends_on:
       minio-init:
         condition: service_completed_successfully
@@ -135,10 +135,11 @@ services:
       DATABASE_URL: ${AUTH_DATABASE_URL:-postgresql+asyncpg://app:change-me-in-production@postgres:5432/auth_db}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://app:change-me-in-production@rabbitmq:5672/}
-      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
       SMS_PROVIDER: ${SMS_PROVIDER:-mock}
       JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-change-in-production}
       OTP_SECRET: ${OTP_SECRET:-dev-only-otp-secret-change-in-production}
+      ADMIN_PHONE: ${ADMIN_PHONE-+79990000000}
     volumes:
       - ./services/auth-service:/app
     depends_on:
@@ -169,6 +170,8 @@ services:
     environment:
       DATABASE_URL: ${ORDERS_DATABASE_URL:-postgresql+asyncpg://app:change-me-in-production@postgres:5432/orders_db}
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://app:change-me-in-production@rabbitmq:5672/}
+      AUTH_ME_URL: http://auth-api:8000/api/v1/auth/me
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
     volumes:
       - ./services/order-service:/app
     depends_on:
@@ -176,8 +179,26 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      auth-api:
+        condition: service_started
     ports:
       - "8103:8000"
+
+  admin-frontend:
+    build:
+      context: ./admin-frontend
+      args:
+        VITE_AUTH_API_URL: ${ADMIN_AUTH_API_URL:-http://localhost:8102/api/v1/auth}
+        VITE_CATALOG_ADMIN_API_URL: ${ADMIN_CATALOG_API_URL:-http://localhost:8101/api/v1/admin/catalog}
+        VITE_ORDERS_ADMIN_API_URL: ${ADMIN_ORDERS_API_URL:-http://localhost:8103/api/v1/admin/orders}
+        VITE_MEDIA_API_URL: ${ADMIN_MEDIA_API_URL:-http://localhost:8104/api/v1/media}
+    depends_on:
+      - auth-api
+      - catalog-api
+      - orders-api
+      - media-api
+    ports:
+      - "5174:80"
 
 volumes:
   postgres_data:
