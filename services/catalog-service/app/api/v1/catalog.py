@@ -1,34 +1,26 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import get_db_session
+from app.repositories.products import ProductRepository
 from app.schemas.product import ProductPreview
+from app.services.catalog import to_product_preview
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
 
-# Временный контракт API: на следующем этапе этот список заменит запрос к PostgreSQL.
-MOCK_PRODUCTS = [
-    {
-        "id": 1,
-        "slug": "kandura-sand",
-        "name": "Кандура «Песок»",
-        "category": "Кандуры",
-        "price": "6490",
-        "sizes": ["S", "M", "L", "XL", "XXL"],
-        "image": "/media/products/kandura-sand.png",
-        "is_new": True,
-    },
-    {
-        "id": 2,
-        "slug": "jubba-noir",
-        "name": "Джубба «Ночь»",
-        "category": "Джуббы",
-        "price": "7890",
-        "sizes": ["M", "L", "XL", "XXL"],
-        "image": "/media/products/jubba-noir.png",
-        "is_new": False,
-    },
-]
-
 
 @router.get("/products", response_model=list[ProductPreview])
-async def list_products() -> list[ProductPreview]:
-    return [ProductPreview(**product) for product in MOCK_PRODUCTS]
+async def list_products(
+    category: str | None = Query(default=None, max_length=80),
+    session: AsyncSession = Depends(get_db_session),
+) -> list[ProductPreview]:
+    products = await ProductRepository(session).list_active(category)
+    return [to_product_preview(product) for product in products]
+
+
+@router.get("/products/{slug}", response_model=ProductPreview)
+async def get_product(slug: str, session: AsyncSession = Depends(get_db_session)) -> ProductPreview:
+    product = await ProductRepository(session).get_active_by_slug(slug)
+    if product is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Товар не найден")
+    return to_product_preview(product)

@@ -2,7 +2,7 @@ import type { Product } from '../types/product'
 
 export const products: Product[] = [
   {
-    id: 1,
+    id: '11111111-1111-4111-8111-111111111111',
     slug: 'kandura-sand',
     name: 'Кандура «Песок»',
     category: 'Кандуры',
@@ -13,7 +13,7 @@ export const products: Product[] = [
     isNew: true,
   },
   {
-    id: 2,
+    id: '22222222-2222-4222-8222-222222222222',
     slug: 'jubba-noir',
     name: 'Джубба «Ночь»',
     category: 'Джуббы',
@@ -23,7 +23,7 @@ export const products: Product[] = [
     tone: 'noir',
   },
   {
-    id: 3,
+    id: '33333333-3333-4333-8333-333333333333',
     slug: 'thobe-olive',
     name: 'Тоб «Олива»',
     category: 'Тобы',
@@ -34,7 +34,7 @@ export const products: Product[] = [
     isNew: true,
   },
   {
-    id: 4,
+    id: '44444444-4444-4444-8444-444444444444',
     slug: 'jubba-milk',
     name: 'Джубба «Молоко»',
     category: 'Джуббы',

@@ -5,8 +5,8 @@ type Props = {
   items: CartItem[]
   isOpen: boolean
   onClose: () => void
-  onChangeQuantity: (id: number, size: string, delta: number) => void
-  onRemove: (id: number, size: string) => void
+  onChangeQuantity: (id: string, size: string, delta: number) => void
+  onRemove: (id: string, size: string) => void
   onCheckout: () => void
 }
 

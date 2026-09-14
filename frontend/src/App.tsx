@@ -8,11 +8,12 @@ import { ProductCard } from './components/ProductCard'
 import { products } from './data/products'
 import type { CartItem, Product } from './types/product'
 import { refreshAuthSession, type AuthUser } from './services/auth'
+import { fetchProducts } from './services/catalog'
 
 const categories = ['Все', 'Кандуры', 'Джуббы', 'Тобы']
 const CART_STORAGE_KEY = 'sabr-cart-v1'
 
-type StoredCartItem = { id: number; size: string; quantity: number }
+type StoredCartItem = { id: string; size: string; quantity: number }
 
 function loadCart(): CartItem[] {
   try {
@@ -38,6 +39,7 @@ function loadCart(): CartItem[] {
 
 export default function App() {
   const [activeCategory, setActiveCategory] = useState('Все')
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>(products)
   const [cartItems, setCartItems] = useState<CartItem[]>(loadCart)
   const [isCartOpen, setCartOpen] = useState(false)
   const [isCheckoutOpen, setCheckoutOpen] = useState(false)
@@ -48,8 +50,8 @@ export default function App() {
   const [notice, setNotice] = useState('')
 
   const shownProducts = useMemo(
-    () => activeCategory === 'Все' ? products : products.filter(product => product.category === activeCategory),
-    [activeCategory],
+    () => activeCategory === 'Все' ? catalogProducts : catalogProducts.filter(product => product.category === activeCategory),
+    [activeCategory, catalogProducts],
   )
   const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0)
 
@@ -64,6 +66,9 @@ export default function App() {
 
   useEffect(() => {
     refreshAuthSession().then(result => setAuthUser(result.user)).catch(() => undefined)
+    fetchProducts().then(result => {
+      if (result.length > 0) setCatalogProducts(result)
+    }).catch(() => undefined)
   }, [])
 
   function addToCart(product: Product, size: string) {
@@ -77,7 +82,7 @@ export default function App() {
     window.setTimeout(() => setNotice(''), 2600)
   }
 
-  function changeQuantity(id: number, size: string, delta: number) {
+  function changeQuantity(id: string, size: string, delta: number) {
     setCartItems(current => current.flatMap(item => {
       if (item.id !== id || item.size !== size) return [item]
       const quantity = item.quantity + delta
@@ -85,7 +90,7 @@ export default function App() {
     }))
   }
 
-  function removeItem(id: number, size: string) {
+  function removeItem(id: string, size: string) {
     setCartItems(current => current.filter(item => item.id !== id || item.size !== size))
   }
 
