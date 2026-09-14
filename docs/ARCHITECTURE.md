@@ -17,7 +17,7 @@ React storefront
 | Сервис | Ответственность | Данные | События RabbitMQ |
 | --- | --- | --- | --- |
 | `catalog-api` | товары, варианты, размеры, остатки, изображения | `catalog_db` | публикует `catalog.product_changed` |
-| `auth-api` | номер телефона, SMS OTP, пользователи, роли, JWT | `auth_db`, Redis | публикует `auth.sms_code_requested`, `auth.user_registered` |
+| `auth-api` | номер телефона, SMS OTP, пользователи, роли, JWT | `auth_db`, Redis | публикует `auth.sms_code_requested` |
 | `orders-api` | серверная корзина, заказ, платёж, история статусов | `orders_db` | потребляет `auth.user_registered`, публикует `order.created`, `order.status_changed` |
 | `notification-worker` | отправка SMS/email, ретраи, журнал доставки | собственное техническое хранилище при необходимости | потребляет события авторизации и заказов |
 

@@ -1,19 +1,48 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowDownRight, ChevronDown, Menu, Search, ShoppingBag, UserRound, X } from 'lucide-react'
 import { CartDrawer } from './components/CartDrawer'
 import { CheckoutDialog } from './components/CheckoutDialog'
+import { AuthDialog } from './components/AuthDialog'
 import { Logo } from './components/Logo'
 import { ProductCard } from './components/ProductCard'
 import { products } from './data/products'
 import type { CartItem, Product } from './types/product'
+import { refreshAuthSession, type AuthUser } from './services/auth'
 
 const categories = ['Все', 'Кандуры', 'Джуббы', 'Тобы']
+const CART_STORAGE_KEY = 'sabr-cart-v1'
+
+type StoredCartItem = { id: number; size: string; quantity: number }
+
+function loadCart(): CartItem[] {
+  try {
+    const saved = localStorage.getItem(CART_STORAGE_KEY)
+    if (!saved) return []
+
+    const parsed: unknown = JSON.parse(saved)
+    if (!Array.isArray(parsed)) return []
+
+    return parsed.flatMap((stored: StoredCartItem) => {
+      const product = products.find(item => item.id === stored.id)
+      const isValid = product
+        && product.sizes.includes(stored.size)
+        && Number.isInteger(stored.quantity)
+        && stored.quantity > 0
+
+      return isValid ? [{ ...product, size: stored.size, quantity: stored.quantity }] : []
+    })
+  } catch {
+    return []
+  }
+}
 
 export default function App() {
   const [activeCategory, setActiveCategory] = useState('Все')
-  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [cartItems, setCartItems] = useState<CartItem[]>(loadCart)
   const [isCartOpen, setCartOpen] = useState(false)
   const [isCheckoutOpen, setCheckoutOpen] = useState(false)
+  const [isAuthOpen, setAuthOpen] = useState(false)
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null)
   const [orderNumber, setOrderNumber] = useState<string | null>(null)
   const [isMenuOpen, setMenuOpen] = useState(false)
   const [notice, setNotice] = useState('')
@@ -23,6 +52,15 @@ export default function App() {
     [activeCategory],
   )
   const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0)
+
+  useEffect(() => {
+    const storedItems: StoredCartItem[] = cartItems.map(({ id, size, quantity }) => ({ id, size, quantity }))
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(storedItems))
+  }, [cartItems])
+
+  useEffect(() => {
+    refreshAuthSession().then(result => setAuthUser(result.user)).catch(() => undefined)
+  }, [])
 
   function addToCart(product: Product, size: string) {
     setCartItems(current => {
@@ -68,7 +106,7 @@ export default function App() {
         </nav>
         <div className="header-actions">
           <button className="icon-button search-button" aria-label="Поиск"><Search size={20} /></button>
-          <button className="icon-button desktop-only" aria-label="Личный кабинет"><UserRound size={20} /></button>
+          <button className={`account-button ${authUser ? 'is-authenticated' : ''}`} onClick={() => setAuthOpen(true)} aria-label={authUser ? `Личный кабинет ${authUser.phone}` : 'Войти'}><UserRound size={20} /><span>{authUser ? authUser.phone : 'Войти'}</span></button>
           <button className="bag-button" onClick={() => setCartOpen(true)} aria-label={`Корзина, товаров: ${itemCount}`}><ShoppingBag size={20} /><span>{itemCount}</span></button>
           <button className="icon-button menu-button" onClick={() => setMenuOpen(!isMenuOpen)} aria-label="Открыть меню">{isMenuOpen ? <X /> : <Menu />}</button>
         </div>
@@ -101,6 +139,7 @@ export default function App() {
       {notice && <div className="toast" role="status">{notice}</div>}
       <CartDrawer items={cartItems} isOpen={isCartOpen} onClose={() => setCartOpen(false)} onChangeQuantity={changeQuantity} onRemove={removeItem} onCheckout={openCheckout} />
       <CheckoutDialog items={cartItems} isOpen={isCheckoutOpen} orderNumber={orderNumber} onBack={() => { setCheckoutOpen(false); setCartOpen(true) }} onClose={() => setCheckoutOpen(false)} onSubmit={placeOrder} />
+      <AuthDialog isOpen={isAuthOpen} user={authUser} onClose={() => setAuthOpen(false)} onAuthenticated={user => { setAuthUser(user); setAuthOpen(false) }} onLoggedOut={() => { setAuthUser(null); setAuthOpen(false) }} />
     </main>
   )
 }

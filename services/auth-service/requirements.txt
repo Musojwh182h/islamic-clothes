@@ -1,3 +1,9 @@
+aio-pika==9.5.7
+alembic==1.16.5
+asyncpg==0.30.0
 fastapi==0.116.1
+PyJWT==2.14.0
 pydantic-settings==2.10.1
+redis==8.1.0
+SQLAlchemy==2.0.43
 uvicorn[standard]==0.35.0

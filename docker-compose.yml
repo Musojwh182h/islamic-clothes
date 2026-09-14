@@ -52,7 +52,7 @@ services:
       DATABASE_URL: ${CATALOG_DATABASE_URL:-postgresql+asyncpg://app:change-me-in-production@postgres:5432/catalog_db}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://app:change-me-in-production@rabbitmq:5672/}
-      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
     volumes:
       - ./services/catalog-service:/app
     depends_on:
@@ -72,6 +72,10 @@ services:
       DATABASE_URL: ${AUTH_DATABASE_URL:-postgresql+asyncpg://app:change-me-in-production@postgres:5432/auth_db}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://app:change-me-in-production@rabbitmq:5672/}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173}
+      SMS_PROVIDER: ${SMS_PROVIDER:-mock}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-change-in-production}
+      OTP_SECRET: ${OTP_SECRET:-dev-only-otp-secret-change-in-production}
     volumes:
       - ./services/auth-service:/app
     depends_on:
@@ -83,6 +87,18 @@ services:
         condition: service_healthy
     ports:
       - "8102:8000"
+
+  notification-worker:
+    build:
+      context: ./services/notification-worker
+    environment:
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://app:change-me-in-production@rabbitmq:5672/}
+      SMS_PROVIDER: ${SMS_PROVIDER:-mock}
+    volumes:
+      - ./services/notification-worker:/app
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
   orders-api:
     build:
