@@ -2,12 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Button,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   Dropdown,
   Field,
   MessageBar,
@@ -36,6 +30,10 @@ const nextStatuses: Record<OrderStatus, OrderStatus[]> = {
   cancelled: [],
 }
 
+const deliveryMethodLabels: Record<string, string> = {
+  courier: 'Курьерская доставка',
+}
+
 type OrderDialogProps = {
   api: AdminApi
   order: AdminOrder | null
@@ -57,7 +55,16 @@ export function OrderDialog({ api, order, open, onClose, onSaved }: OrderDialogP
     setError('')
   }, [order, options])
 
-  if (!order) return null
+  useEffect(() => {
+    if (!open) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !saving) onClose()
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [onClose, open, saving])
+
+  if (!order || !open) return null
   const selectedOrder = order
 
   async function saveStatus() {
@@ -74,11 +81,13 @@ export function OrderDialog({ api, order, open, onClose, onSaved }: OrderDialogP
   }
 
   return (
-    <Dialog open={open} onOpenChange={(_, data) => { if (!data.open && !saving) onClose() }}>
-      <DialogSurface className="order-dialog">
-        <DialogBody>
-          <DialogTitle>Заказ {order.number}</DialogTitle>
-          <DialogContent className="dialog-scroll order-content">
+    <div className="admin-modal-layer">
+      <button className="admin-modal-backdrop" type="button" onClick={onClose} disabled={saving} aria-label="Закрыть заказ" />
+      <section className="admin-modal-surface order-dialog" role="dialog" aria-modal="true" aria-labelledby="order-dialog-title">
+        <header className="admin-modal-header">
+          <Text as="h2" id="order-dialog-title" weight="semibold" size={600}>Заказ {order.number}</Text>
+        </header>
+        <div className="dialog-scroll order-content">
             {error && <MessageBar intent="error"><MessageBarBody>{error}</MessageBarBody></MessageBar>}
 
             <section className="order-summary">
@@ -86,7 +95,7 @@ export function OrderDialog({ api, order, open, onClose, onSaved }: OrderDialogP
               <div><Text className="detail-label">Телефон</Text><Text block>{order.customer_phone}</Text></div>
               <div><Text className="detail-label">Создан</Text><Text block>{formatDate(order.created_at)}</Text></div>
               <div><Text className="detail-label">Оплата</Text><Badge color={order.payment_status === 'paid' ? 'success' : 'warning'}>{paymentStatusLabels[order.payment_status] ?? order.payment_status}</Badge></div>
-              <div><Text className="detail-label">Доставка</Text><Text block>{order.delivery_method}</Text></div>
+              <div><Text className="detail-label">Доставка</Text><Text block>{deliveryMethodLabels[order.delivery_method] ?? order.delivery_method}</Text></div>
               <div><Text className="detail-label">Адрес</Text><Text block>{Object.values(order.delivery_address).filter(Boolean).join(', ') || 'Не указан'}</Text></div>
             </section>
 
@@ -145,13 +154,12 @@ export function OrderDialog({ api, order, open, onClose, onSaved }: OrderDialogP
                 </div>
               )}
             </section>
-          </DialogContent>
-          <DialogActions>
+        </div>
+        <footer className="admin-modal-actions">
             <Button appearance="secondary" onClick={onClose} disabled={saving}>Закрыть</Button>
             {options.length > 0 && <Button appearance="primary" onClick={saveStatus} disabled={saving || !statusValue}>{saving ? 'Сохраняем' : 'Изменить статус'}</Button>}
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
+        </footer>
+      </section>
+    </div>
   )
 }

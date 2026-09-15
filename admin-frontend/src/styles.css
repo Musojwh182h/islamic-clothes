@@ -392,9 +392,78 @@ textarea {
   max-width: 980px;
 }
 
-.fui-DialogSurface.order-dialog {
+.admin-modal-layer {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.admin-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: rgb(0 0 0 / 64%);
+  cursor: default;
+}
+
+.admin-modal-surface.order-dialog {
+  position: relative;
+  z-index: 1;
+  display: grid;
   width: min(900px, calc(100vw - 32px));
   max-width: 900px;
+  max-height: calc(100dvh - 32px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 24px;
+  overflow: hidden;
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: 10px;
+  color: var(--colorNeutralForeground1);
+  background: var(--colorNeutralBackground1);
+  box-shadow: var(--shadow64);
+}
+
+.admin-modal-header h2 {
+  margin: 0;
+}
+
+.admin-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.app-error {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 24px;
+  color: var(--colorNeutralForeground1, #f5f5f5);
+  background: var(--colorNeutralBackground2, #242424);
+}
+
+.app-error > div {
+  width: min(480px, 100%);
+  padding: 32px;
+  border: 1px solid var(--colorNeutralStroke2, #555);
+  border-radius: 10px;
+  background: var(--colorNeutralBackground1, #292929);
+}
+
+.app-error button {
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--colorNeutralForegroundOnBrand, #fff);
+  background: var(--colorBrandBackground, #0f806b);
+  cursor: pointer;
 }
 
 .dialog-scroll {
