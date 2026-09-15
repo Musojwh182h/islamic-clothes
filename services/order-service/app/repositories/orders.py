@@ -45,3 +45,30 @@ class OrderRepository:
         if for_update:
             statement = statement.with_for_update()
         return await self.session.scalar(statement)
+
+    async def list_customer(
+        self,
+        user_id: uuid.UUID,
+        offset: int,
+        limit: int,
+    ) -> tuple[list[Order], int]:
+        customer_filter = Order.user_id == user_id
+        total = await self.session.scalar(select(func.count(Order.id)).where(customer_filter))
+        statement = (
+            select(Order)
+            .where(customer_filter)
+            .options(selectinload(Order.items))
+            .order_by(Order.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        result = await self.session.scalars(statement)
+        return list(result.unique()), int(total or 0)
+
+    async def get_customer_by_id(self, order_id: uuid.UUID, user_id: uuid.UUID) -> Order | None:
+        statement = (
+            select(Order)
+            .where(Order.id == order_id, Order.user_id == user_id)
+            .options(selectinload(Order.items), selectinload(Order.history))
+        )
+        return await self.session.scalar(statement)
