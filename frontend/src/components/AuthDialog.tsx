@@ -119,7 +119,6 @@ export function AuthDialog({ isOpen, user, onClose, onAuthenticated, onLoggedOut
             <p className="eyebrow">ЛИЧНЫЙ КАБИНЕТ</p>
             <h2 id="auth-title">Вы вошли.</h2>
             <p className="account-phone">{user.phone}</p>
-            <span className="account-role">Роль: {user.role === 'admin' ? 'администратор' : 'покупатель'}</span>
             <button className="primary-button account-orders-button" type="button" onClick={() => setAccountView('orders')}><PackageSearch size={17} /> Мои заказы</button>
             <button className="secondary-button" type="button" onClick={() => void logout()} disabled={isSubmitting}><LogOut size={16} /> Выйти</button>
           </div>

@@ -152,7 +152,7 @@ export default function App() {
       <header className="site-header">
         <Logo />
         <nav className="desktop-nav" aria-label="Основная навигация">
-          <a href="#catalog">Каталог</a><a href="#philosophy">О нас</a><a href="#delivery">Доставка</a>
+          <a href="#catalog">Каталог</a><a href="#delivery">Доставка</a>
         </nav>
         <div className="header-actions">
           <button className="icon-button search-button" aria-label="Поиск"><Search size={20} /></button>
@@ -160,7 +160,7 @@ export default function App() {
           <button className="bag-button" onClick={() => setCartOpen(true)} aria-label={`Корзина, товаров: ${itemCount}`}><ShoppingBag size={20} /><span>{itemCount}</span></button>
           <button className="icon-button menu-button" onClick={() => setMenuOpen(!isMenuOpen)} aria-label="Открыть меню">{isMenuOpen ? <X /> : <Menu />}</button>
         </div>
-        {isMenuOpen && <nav className="mobile-nav"><a href="#catalog" onClick={() => setMenuOpen(false)}>Каталог</a><a href="#philosophy" onClick={() => setMenuOpen(false)}>О нас</a><a href="#delivery" onClick={() => setMenuOpen(false)}>Доставка</a><button onClick={() => setCartOpen(true)}>Корзина ({itemCount})</button></nav>}
+        {isMenuOpen && <nav className="mobile-nav"><a href="#catalog" onClick={() => setMenuOpen(false)}>Каталог</a><a href="#delivery" onClick={() => setMenuOpen(false)}>Доставка</a><button onClick={() => setCartOpen(true)}>Корзина ({itemCount})</button></nav>}
       </header>
 
       <section className="hero" aria-labelledby="hero-title">
@@ -179,11 +179,6 @@ export default function App() {
         {!catalogReady && !catalogError && <p role="status">Загружаем каталог…</p>}
         {catalogReady && shownProducts.length === 0 && <p>В этой категории пока нет товаров.</p>}
         <div className="product-grid">{shownProducts.map(product => <ProductCard key={product.id} product={product} onAdd={addToCart} />)}</div>
-      </section>
-
-      <section id="philosophy" className="philosophy">
-        <div className="philosophy-image" role="img" aria-label="Деталь натуральной ткани" />
-        <div className="philosophy-copy"><p className="eyebrow">НАШ ПОДХОД</p><h2>Вещи — не для впечатления. <em>Для смысла.</em></h2><p>Мы ищем правильный баланс: чистые формы, достойная посадка и ткани, к которым хочется возвращаться. Никакого шума — только то, что остаётся важным.</p><a href="#catalog" className="text-link">Узнать о материалах <ArrowDownRight size={17} /></a></div>
       </section>
 
       <section id="delivery" className="benefits section-shell"><div><span>01</span><h3>По России</h3><p>Стоимость и сроки доставки согласуем при подтверждении заказа.</p></div><div><span>02</span><h3>Без суеты</h3><p>Поможем уточнить размер и состав заказа перед отправкой.</p></div><div><span>03</span><h3>Всё в рублях</h3><p>Оплата после подтверждения заказа. Способ согласуем с вами.</p></div></section>
