@@ -2,12 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   Badge,
   Button,
-  Dropdown,
   Field,
   Input,
   MessageBar,
   MessageBarBody,
-  Option,
+  Select,
   Skeleton,
   SkeletonItem,
   Table,
@@ -80,14 +79,13 @@ export function OrdersPage({ api }: { api: AdminApi }) {
           />
         </Field>
         <Field label="Статус" className="status-filter">
-          <Dropdown
-            value={statusFilter ? orderStatusLabels[statusFilter] : 'Все статусы'}
-            selectedOptions={[statusFilter]}
-            onOptionSelect={(_, data) => setStatusFilter((data.optionValue ?? '') as OrderStatus | '')}
+          <Select
+            value={statusFilter}
+            onChange={(_, data) => setStatusFilter(data.value as OrderStatus | '')}
           >
-            <Option value="">Все статусы</Option>
-            {statuses.map(value => <Option key={value} value={value}>{orderStatusLabels[value]}</Option>)}
-          </Dropdown>
+            <option value="">Все статусы</option>
+            {statuses.map(value => <option key={value} value={value}>{orderStatusLabels[value]}</option>)}
+          </Select>
         </Field>
         <Button appearance="secondary" onClick={() => setAppliedQuery(query)}>Найти</Button>
       </section>

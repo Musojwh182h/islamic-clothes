@@ -2,11 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Button,
-  Dropdown,
   Field,
   MessageBar,
   MessageBarBody,
-  Option,
+  Select,
   Table,
   TableBody,
   TableCell,
@@ -146,13 +145,12 @@ export function OrderDialog({ api, order, open, onClose, onSaved }: OrderDialogP
               ) : (
                 <div className="status-form">
                   <Field label="Следующий статус" required>
-                    <Dropdown
-                      value={selectedStatus ? orderStatusLabels[selectedStatus] : ''}
-                      selectedOptions={selectedStatus ? [selectedStatus] : []}
-                      onOptionSelect={(_, data) => setStatusValue((data.optionValue ?? '') as OrderStatus | '')}
+                    <Select
+                      value={selectedStatus}
+                      onChange={(_, data) => setStatusValue(data.value as OrderStatus | '')}
                     >
-                      {options.map(value => <Option key={value} value={value}>{orderStatusLabels[value]}</Option>)}
-                    </Dropdown>
+                      {options.map(value => <option key={value} value={value}>{orderStatusLabels[value]}</option>)}
+                    </Select>
                   </Field>
                   <Field label="Комментарий" hint="Будет сохранён в истории заказа">
                     <Textarea resize="vertical" value={comment} onChange={(_, data) => setComment(data.value)} />

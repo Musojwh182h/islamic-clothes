@@ -489,7 +489,7 @@ textarea {
 .product-dialog .fui-Textarea,
 .product-dialog .fui-Select,
 .toolbar .fui-Input,
-.toolbar .fui-Dropdown {
+.toolbar .fui-Select {
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -671,7 +671,7 @@ textarea {
 }
 
 .status-form > *,
-.status-form .fui-Dropdown,
+.status-form .fui-Select,
 .status-form .fui-Textarea {
   width: 100%;
   min-width: 0;
