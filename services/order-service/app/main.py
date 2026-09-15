@@ -17,6 +17,7 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     auth_client = httpx.AsyncClient(timeout=httpx.Timeout(5.0, connect=2.0))
     app.state.admin_authorizer = AdminAuthorizer(auth_client, settings.auth_me_url)
+    app.state.checkout_client = auth_client
     try:
         yield
     finally:
@@ -34,8 +35,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
 )
 app.include_router(api_router, prefix=settings.api_v1_prefix)
 

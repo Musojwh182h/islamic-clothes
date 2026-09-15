@@ -54,6 +54,12 @@ export function OrdersPage({ api }: { api: AdminApi }) {
 
   useEffect(() => { void load() }, [load])
 
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible') void load() }
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
+  }, [load])
+
   return (
     <main className="page-shell">
       <header className="page-header">
@@ -96,7 +102,7 @@ export function OrdersPage({ api }: { api: AdminApi }) {
         ) : orders.length === 0 ? (
           <div className="empty-state">
             <Text weight="semibold" size={500}>Заказов пока нет</Text>
-            <Text block className="muted-copy">После подключения оформления новые заказы появятся здесь автоматически.</Text>
+            <Text block className="muted-copy">Здесь появятся заказы покупателей. Если включены фильтры, попробуйте изменить условия поиска.</Text>
           </div>
         ) : (
           <div className="table-scroll">

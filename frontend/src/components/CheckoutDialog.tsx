@@ -1,6 +1,7 @@
 import { Check, ChevronLeft, LockKeyhole, X } from 'lucide-react'
-import type { FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import type { CartItem } from '../types/product'
+import type { DeliveryDetails } from '../services/orders'
 
 type Props = {
   items: CartItem[]
@@ -8,17 +9,38 @@ type Props = {
   orderNumber: string | null
   onBack: () => void
   onClose: () => void
-  onSubmit: () => void
+  onSubmit: (details: DeliveryDetails) => Promise<void>
+  busy: boolean
+  error: string
+  phone: string
+  totalSaved: number | null
 }
 
 const money = new Intl.NumberFormat('ru-RU')
 
-export function CheckoutDialog({ items, isOpen, orderNumber, onBack, onClose, onSubmit }: Props) {
+export function CheckoutDialog({ items, isOpen, orderNumber, onBack, onClose, onSubmit, busy, error, phone, totalSaved }: Props) {
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const [details, setDetails] = useState({ recipient_name: '', phone: '', city: '', address: '' })
+  const [consent, setConsent] = useState(false)
+
+  useEffect(() => {
+    if (phone) setDetails(current => current.phone ? current : { ...current, phone })
+  }, [phone])
+
+  useEffect(() => {
+    if (!orderNumber) return
+    setDetails(current => ({ recipient_name: '', phone: current.phone, city: '', address: '' }))
+    setConsent(false)
+  }, [orderNumber])
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    onSubmit()
+    void onSubmit({
+      recipient_name: details.recipient_name.trim(),
+      phone: details.phone.trim(),
+      city: details.city.trim(),
+      address: details.address.trim(),
+    })
   }
 
   if (!isOpen) return null
@@ -35,25 +57,26 @@ export function CheckoutDialog({ items, isOpen, orderNumber, onBack, onClose, on
         {orderNumber ? (
           <div className="order-success">
             <span className="success-mark"><Check size={29} /></span>
-            <p className="eyebrow">ДЕМО-ЗАКАЗ № {orderNumber}</p>
+            <p className="eyebrow">ЗАКАЗ № {orderNumber}</p>
             <h2 id="checkout-title">Заказ оформлен.</h2>
-            <p>Это тестовое оформление: деньги не списывались. После подключения orders-service и платёжного провайдера заказ будет сохраняться и оплачиваться по-настоящему.</p>
+            <p>Заказ на сумму {money.format(totalSaved ?? 0)} ₽ передан магазину. Мы свяжемся с вами для подтверждения наличия, стоимости доставки и оплаты. Деньги пока не списывались.</p>
             <button className="primary-button" type="button" onClick={onClose}>Вернуться в магазин</button>
           </div>
         ) : (
           <div className="checkout-layout">
             <form className="checkout-form" onSubmit={submit}>
+              {error && <p className="form-error" role="alert">{error}</p>}
               <div className="checkout-title-block"><p className="eyebrow">ОФОРМЛЕНИЕ</p><h2 id="checkout-title">Куда доставить?</h2><p>Заполните данные получателя. Поля со звёздочкой обязательны.</p></div>
               <div className="form-grid">
-                <label><span>Имя и фамилия *</span><input name="name" autoComplete="name" required minLength={2} placeholder="Ахмад Ахмадов" /></label>
-                <label><span>Телефон *</span><input name="phone" type="tel" autoComplete="tel" required pattern="[+0-9 ()-]{10,20}" placeholder="+7 999 000-00-00" /></label>
-                <label><span>Город *</span><input name="city" autoComplete="address-level2" required minLength={2} placeholder="Москва" /></label>
-                <label><span>Адрес *</span><input name="address" autoComplete="street-address" required minLength={5} placeholder="Улица, дом, квартира" /></label>
+                <label><span>Имя и фамилия *</span><input name="name" autoComplete="name" required minLength={2} maxLength={180} value={details.recipient_name} onChange={e => setDetails({ ...details, recipient_name: e.target.value })} placeholder="Ахмад Ахмадов" /></label>
+                <label><span>Телефон *</span><input name="phone" type="tel" autoComplete="tel" value={details.phone} onChange={e => setDetails({ ...details, phone: e.target.value })} required minLength={10} maxLength={24} placeholder="+7 999 000-00-00" /></label>
+                <label><span>Город *</span><input name="city" autoComplete="address-level2" required minLength={2} maxLength={120} value={details.city} onChange={e => setDetails({ ...details, city: e.target.value })} placeholder="Москва" /></label>
+                <label><span>Адрес *</span><input name="address" autoComplete="street-address" required minLength={5} maxLength={500} value={details.address} onChange={e => setDetails({ ...details, address: e.target.value })} placeholder="Улица, дом, квартира" /></label>
               </div>
-              <fieldset className="delivery-choice"><legend>Способ доставки</legend><label><input type="radio" name="delivery" value="courier" defaultChecked /><span><strong>Курьерская доставка</strong><small>Стоимость уточним после подключения службы доставки</small></span></label></fieldset>
-              <fieldset className="delivery-choice"><legend>Оплата</legend><label><input type="radio" name="payment" value="demo" defaultChecked /><span><strong>Тестовое оформление</strong><small>Без списания денежных средств</small></span></label></fieldset>
-              <label className="consent"><input type="checkbox" required /><span>Согласен на обработку данных для оформления заказа</span></label>
-              <button className="primary-button place-order" type="submit">Оформить демо-заказ <LockKeyhole size={15} /></button>
+              <fieldset className="delivery-choice"><legend>Способ доставки</legend><label><input type="radio" name="delivery" value="courier" defaultChecked /><span><strong>Курьерская доставка</strong><small>Стоимость согласуем при подтверждении заказа</small></span></label></fieldset>
+              <fieldset className="delivery-choice"><legend>Оплата</legend><span><strong>После подтверждения заказа</strong><small>Менеджер согласует способ оплаты. Сейчас деньги не списываются.</small></span></fieldset>
+              <label className="consent"><input type="checkbox" required checked={consent} onChange={e => setConsent(e.target.checked)} /><span>Согласен на обработку данных для оформления заказа</span></label>
+              <button className="primary-button place-order" type="submit" disabled={busy || items.length === 0}>{busy ? 'Отправляем заказ…' : 'Оформить заказ'} <LockKeyhole size={15} /></button>
             </form>
 
             <aside className="order-summary">

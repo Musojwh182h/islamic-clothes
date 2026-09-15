@@ -28,7 +28,16 @@ function errorMessage(payload: unknown, fallback: string): string {
   const detail = payload.detail
   if (typeof detail === 'string') return detail
   if (Array.isArray(detail)) {
-    return detail.map(item => (typeof item === 'object' && item && 'msg' in item ? String(item.msg) : String(item))).join('; ')
+    const labels: Record<string, string> = { slug: 'Адрес товара', name: 'Название', category: 'Категория', sku: 'Артикул', size: 'Размер', stock_quantity: 'Количество', price_kopecks: 'Цена', images: 'Фотографии', variants: 'Размеры', object_key: 'Фотография', comment: 'Комментарий' }
+    return detail.map(item => {
+      const field = Array.isArray(item?.loc) ? String(item.loc.at(-1)) : ''
+      const label = labels[field] ?? 'Данные формы'
+      if (item?.type === 'string_pattern_mismatch') return `${label}: используйте латинские буквы, цифры и дефисы`
+      if (item?.type === 'string_too_short') return `${label}: введите не менее ${item.ctx?.min_length ?? 1} символов`
+      if (item?.type === 'greater_than_equal') return `${label}: значение должно быть не меньше ${item.ctx?.ge ?? 0}`
+      if (item?.type === 'value_error' && typeof item.msg === 'string') return item.msg.replace(/^Value error, /, '')
+      return `${label}: проверьте заполненное значение`
+    }).join('; ')
   }
   return fallback
 }

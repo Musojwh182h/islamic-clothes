@@ -98,7 +98,11 @@ class ProductAdminService:
             for item in data.images
         ]
         self.session.add(product)
-        await self.session.flush()
+        try:
+            await self.session.flush()
+        except IntegrityError as exc:
+            await self.session.rollback()
+            raise CatalogConflict("Адрес товара, артикул или размер уже используется. Укажите другое значение") from exc
         self._audit(actor_user_id, "catalog.product_created", product.id, {"slug": product.slug})
         await self._commit_or_conflict()
         return await self._reload(product.id)
@@ -210,7 +214,7 @@ class ProductAdminService:
             await self.session.commit()
         except IntegrityError as exc:
             await self.session.rollback()
-            raise CatalogConflict("Slug, SKU или размер уже используется") from exc
+            raise CatalogConflict("Адрес товара, артикул или размер уже используется. Укажите другое значение") from exc
 
     async def _reload(self, product_id: uuid.UUID) -> Product:
         product = await self.repository.get_admin_by_id(product_id)

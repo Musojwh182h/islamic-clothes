@@ -13,6 +13,7 @@ import {
   MessageBar,
   MessageBarBody,
   Switch,
+  Select,
   Text,
   Textarea,
 } from '@fluentui/react-components'
@@ -20,6 +21,7 @@ import { AddRegular, DeleteRegular, ImageAddRegular } from '@fluentui/react-icon
 
 import { AdminApi, ApiError } from '../services/api'
 import type { AdminProduct, ProductPayload, ProductVariant } from '../types'
+import { productAddress, productArticle } from '../lib/productForm'
 
 type ProductDialogProps = {
   api: AdminApi
@@ -77,11 +79,15 @@ export function ProductDialog({ api, open, product, onClose, onSaved }: ProductD
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [addressEdited, setAddressEdited] = useState(false)
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (open) {
       setDraft(initialPayload(product))
       setError('')
+      setAddressEdited(Boolean(product))
+      setPreviewUrls(Object.fromEntries((product?.images ?? []).map(image => [image.object_key, image.url])))
     }
   }, [open, product])
 
@@ -106,6 +112,7 @@ export function ProductDialog({ api, open, product, onClose, onSaved }: ProductD
     setUploading(true)
     try {
       const uploaded = await api.uploadImage(file)
+      setPreviewUrls(current => ({ ...current, [uploaded.object_key]: uploaded.url }))
       setDraft(current => ({
         ...current,
         images: [
@@ -127,6 +134,14 @@ export function ProductDialog({ api, open, product, onClose, onSaved }: ProductD
   async function submit(event: FormEvent) {
     event.preventDefault()
     setError('')
+    if (productAddress(draft.slug).length < 3) {
+      setError('Адрес товара должен содержать хотя бы 3 буквы или цифры. Например: belaya-dzhubba')
+      return
+    }
+    if (!draft.name.trim() || !draft.category.trim()) {
+      setError('Заполните название и категорию товара')
+      return
+    }
     if (draft.variants.length === 0) {
       setError('Добавьте хотя бы один размер')
       return
@@ -135,10 +150,11 @@ export function ProductDialog({ api, open, product, onClose, onSaved }: ProductD
     try {
       const normalized: ProductPayload = {
         ...draft,
+        slug: productAddress(draft.slug),
         price_kopecks: Math.round(draft.price_kopecks),
         variants: draft.variants.map((variant, index) => ({
           ...variant,
-          sku: variant.sku.trim().toUpperCase(),
+          sku: variant.sku.trim() ? productArticle(variant.sku) : `${productAddress(draft.slug).slice(0, 50)}-${productArticle(variant.size)}`.toUpperCase(),
           size: variant.size.trim().toUpperCase(),
           stock_quantity: Math.round(variant.stock_quantity),
           sort_order: index,
@@ -157,7 +173,7 @@ export function ProductDialog({ api, open, product, onClose, onSaved }: ProductD
   }
 
   return (
-    <Dialog open={open} onOpenChange={(_, data) => { if (!data.open && !saving) onClose() }}>
+    <Dialog open={open} onOpenChange={(_, data) => { if (!data.open && !saving && !uploading) onClose() }}>
       <DialogSurface className="product-dialog">
         <DialogBody>
           <DialogTitle>{product ? 'Редактирование товара' : 'Новый товар'}</DialogTitle>
@@ -168,30 +184,38 @@ export function ProductDialog({ api, open, product, onClose, onSaved }: ProductD
                 <Text weight="semibold" size={400}>Основные данные</Text>
                 <div className="form-grid">
                   <Field label="Название" required>
-                    <Input value={draft.name} onChange={(_, data) => setField('name', data.value)} />
+                    <Input required minLength={2} maxLength={180} value={draft.name} onChange={(_, data) => { setField('name', data.value); if (!addressEdited) setField('slug', productAddress(data.value)) }} />
                   </Field>
-                  <Field label="Slug" required hint="Латиница, цифры и дефисы">
-                    <Input value={draft.slug} onChange={(_, data) => setField('slug', data.value.toLowerCase())} />
+                  <Field label="Адрес товара" required hint="Создаётся из названия. Русские буквы автоматически заменяются латинскими при выходе из поля.">
+                    <Input required minLength={3} maxLength={120} value={draft.slug} onChange={(_, data) => { setAddressEdited(true); setField('slug', data.value) }} onBlur={() => setField('slug', productAddress(draft.slug))} />
                   </Field>
                   <Field label="Категория" required>
-                    <Input value={draft.category} onChange={(_, data) => setField('category', data.value)} />
+                    <Select value={draft.category} onChange={(_, data) => setField('category', data.value)}>
+                      {[...new Set(['Кандуры', 'Джуббы', 'Тобы', 'Головные уборы', 'Брюки', 'Комплекты', draft.category])].filter(Boolean).map(value => <option key={value}>{value}</option>)}
+                    </Select>
                   </Field>
                   <Field label="Цена, рубли" required>
                     <Input
                       type="number"
                       min={0}
+                      step="0.01"
                       value={String(draft.price_kopecks / 100)}
                       onChange={(_, data) => setField('price_kopecks', Math.round((Number(data.value) || 0) * 100))}
                     />
                   </Field>
                   <Field label="Цвет">
-                    <Input value={draft.color} onChange={(_, data) => setField('color', data.value)} />
+                    <Input list={`${formId}-colors`} value={draft.color} onChange={(_, data) => setField('color', data.value)} />
+                    <datalist id={`${formId}-colors`}>{['Белый', 'Чёрный', 'Бежевый', 'Зелёный', 'Оливковый', 'Серый', 'Синий', 'Коричневый'].map(value => <option key={value} value={value} />)}</datalist>
                   </Field>
                   <Field label="Материал">
-                    <Input value={draft.material} onChange={(_, data) => setField('material', data.value)} />
+                    <Input list={`${formId}-materials`} value={draft.material} onChange={(_, data) => setField('material', data.value)} />
+                    <datalist id={`${formId}-materials`}>{['Хлопок', 'Лён', 'Шерсть', 'Вискоза', 'Хлопок и лён', 'Смесовая ткань'].map(value => <option key={value} value={value} />)}</datalist>
                   </Field>
-                  <Field label="Цветовой код карточки" hint="Например: sand, olive, noir">
-                    <Input value={draft.tone} onChange={(_, data) => setField('tone', data.value)} />
+                  <Field label="Фон карточки" hint="Цвет под фотографией в каталоге">
+                    <Select value={draft.tone} onChange={(_, data) => setField('tone', data.value)}>
+                      <option value="sand">Песочный</option><option value="olive">Оливковый</option><option value="noir">Тёмный</option><option value="milk">Молочный</option>
+                      {!['sand', 'olive', 'noir', 'milk'].includes(draft.tone) && <option value={draft.tone}>Текущий фон</option>}
+                    </Select>
                   </Field>
                 </div>
                 <Field label="Описание">
@@ -222,15 +246,17 @@ export function ProductDialog({ api, open, product, onClose, onSaved }: ProductD
                   {draft.variants.map((variant, index) => (
                     <div className="variant-row" key={variant.id ?? `new-${index}`}>
                       <Field label="Размер" required>
-                        <Input value={variant.size} onChange={(_, data) => updateVariant(index, { size: data.value })} />
+                        <Input required maxLength={16} list={`${formId}-sizes`} value={variant.size} onChange={(_, data) => updateVariant(index, { size: data.value.toUpperCase() })} />
                       </Field>
-                      <Field label="SKU" required>
-                        <Input value={variant.sku} onChange={(_, data) => updateVariant(index, { sku: data.value })} />
+                      <Field label="Артикул" hint="Можно оставить пустым: создадим автоматически">
+                        <Input maxLength={80} value={variant.sku} onChange={(_, data) => updateVariant(index, { sku: data.value })} onBlur={() => updateVariant(index, { sku: productArticle(variant.sku) })} />
                       </Field>
-                      <Field label="Остаток" required>
+                      <Field label="Количество, шт." required>
                         <Input
                           type="number"
                           min={0}
+                          step={1}
+                          max={1000000}
                           value={String(variant.stock_quantity)}
                           onChange={(_, data) => updateVariant(index, { stock_quantity: Number(data.value) || 0 })}
                         />
@@ -248,13 +274,14 @@ export function ProductDialog({ api, open, product, onClose, onSaved }: ProductD
                     </div>
                   ))}
                 </div>
+                <datalist id={`${formId}-sizes`}>{['XS', 'S', 'M', 'L', 'XL', 'XXL', '48', '50', '52', '54', '56', '58', '60', 'Единый'].map(value => <option key={value} value={value} />)}</datalist>
               </section>
 
               <section className="form-section">
                 <div className="section-heading-row">
                   <div>
                     <Text block weight="semibold" size={400}>Изображения</Text>
-                    <Text className="muted-copy" size={200}>JPEG, PNG или WebP до 12 МБ. Файл будет сохранён в MinIO.</Text>
+                    <Text className="muted-copy" size={200}>JPEG, PNG или WebP до 12 МБ. Первая фотография будет основной.</Text>
                   </div>
                   <label className={`file-button ${uploading ? 'file-button-disabled' : ''}`}>
                     <ImageAddRegular />
@@ -262,7 +289,7 @@ export function ProductDialog({ api, open, product, onClose, onSaved }: ProductD
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
-                      disabled={uploading}
+                      disabled={uploading || saving || draft.images.length >= 12}
                       onChange={event => uploadImage(event.target.files?.[0])}
                     />
                   </label>
@@ -272,11 +299,11 @@ export function ProductDialog({ api, open, product, onClose, onSaved }: ProductD
                 ) : (
                   <div className="image-list">
                     {draft.images.map((image, index) => {
-                      const existing = product?.images.find(item => item.id === image.id)
+                      const previewUrl = previewUrls[image.object_key]
                       return (
                         <div className="image-row" key={image.id ?? image.object_key}>
-                          {existing ? <img src={existing.url} alt="" /> : <div className="image-placeholder"><ImageAddRegular /></div>}
-                          <Field label="Альтернативный текст">
+                          {previewUrl ? <img src={previewUrl} alt="" /> : <div className="image-placeholder"><ImageAddRegular /></div>}
+                          <Field label="Описание фотографии" hint="Например: белая мужская джубба, вид спереди">
                             <Input
                               value={image.alt_text}
                               onChange={(_, data) => setField('images', draft.images.map((item, itemIndex) =>
@@ -301,7 +328,7 @@ export function ProductDialog({ api, open, product, onClose, onSaved }: ProductD
             </form>
           </DialogContent>
           <DialogActions>
-            <Button appearance="secondary" onClick={onClose} disabled={saving}>Отмена</Button>
+            <Button appearance="secondary" onClick={onClose} disabled={saving || uploading}>Отмена</Button>
             <Button appearance="primary" type="submit" form={formId} disabled={saving || uploading}>
               {saving ? 'Сохраняем' : 'Сохранить'}
             </Button>

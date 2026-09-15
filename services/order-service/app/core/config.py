@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    catalog_api_url: str = "http://catalog-api:8000/api/v1/catalog"
     api_v1_prefix: str = "/api/v1"
     database_url: str = "postgresql+asyncpg://app:change-me-in-production@postgres:5432/orders_db"
     rabbitmq_url: str = "amqp://app:change-me-in-production@rabbitmq:5672/"

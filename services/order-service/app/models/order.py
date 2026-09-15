@@ -58,6 +58,7 @@ class Order(TimestampMixin, Base):
     delivery_kopecks: Mapped[int] = mapped_column(Integer, default=0)
     total_kopecks: Mapped[int] = mapped_column(Integer)
     idempotency_key: Mapped[str] = mapped_column(String(80), unique=True)
+    request_fingerprint: Mapped[str | None] = mapped_column(String(64))
 
     items: Mapped[list["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
     history: Mapped[list["OrderStatusHistory"]] = relationship(back_populates="order", cascade="all, delete-orphan")
