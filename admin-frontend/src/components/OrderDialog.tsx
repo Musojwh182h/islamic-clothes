@@ -66,13 +66,19 @@ export function OrderDialog({ api, order, open, onClose, onSaved }: OrderDialogP
 
   if (!order || !open) return null
   const selectedOrder = order
+  const selectedStatus = options.includes(statusValue as OrderStatus)
+    ? statusValue
+    : (options[0] ?? '')
 
   async function saveStatus() {
-    if (!statusValue) return
+    if (!selectedStatus) return
     setSaving(true)
     setError('')
     try {
-      onSaved(await api.updateOrderStatus(selectedOrder, statusValue, comment))
+      const updated = await api.updateOrderStatus(selectedOrder, selectedStatus, comment)
+      setStatusValue(nextStatuses[updated.status][0] ?? '')
+      setComment('')
+      onSaved(updated)
     } catch (reason) {
       setError(reason instanceof ApiError ? reason.message : 'Не удалось изменить статус')
     } finally {
@@ -141,8 +147,8 @@ export function OrderDialog({ api, order, open, onClose, onSaved }: OrderDialogP
                 <div className="status-form">
                   <Field label="Следующий статус" required>
                     <Dropdown
-                      value={statusValue ? orderStatusLabels[statusValue] : ''}
-                      selectedOptions={statusValue ? [statusValue] : []}
+                      value={selectedStatus ? orderStatusLabels[selectedStatus] : ''}
+                      selectedOptions={selectedStatus ? [selectedStatus] : []}
                       onOptionSelect={(_, data) => setStatusValue((data.optionValue ?? '') as OrderStatus | '')}
                     >
                       {options.map(value => <Option key={value} value={value}>{orderStatusLabels[value]}</Option>)}
@@ -156,8 +162,8 @@ export function OrderDialog({ api, order, open, onClose, onSaved }: OrderDialogP
             </section>
         </div>
         <footer className="admin-modal-actions">
-            <Button appearance="secondary" onClick={onClose} disabled={saving}>Закрыть</Button>
-            {options.length > 0 && <Button appearance="primary" onClick={saveStatus} disabled={saving || !statusValue}>{saving ? 'Сохраняем' : 'Изменить статус'}</Button>}
+            <Button type="button" appearance="secondary" onClick={onClose} disabled={saving}>Закрыть</Button>
+            {options.length > 0 && <Button type="button" appearance="primary" onClick={() => void saveStatus()} disabled={saving || !selectedStatus}>{saving ? 'Сохраняем' : 'Изменить статус'}</Button>}
         </footer>
       </section>
     </div>
