@@ -1,5 +1,5 @@
 import { ArrowLeft, Check, LogOut, PackageSearch, ShieldCheck, Smartphone, X } from 'lucide-react'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { logoutAuthSession, requestLoginCode, verifyLoginCode, type AuthUser } from '../services/auth'
 import { CustomerOrders } from './CustomerOrders'
 
@@ -12,6 +12,7 @@ type Props = {
 }
 
 export function AuthDialog({ isOpen, user, onClose, onAuthenticated, onLoggedOut }: Props) {
+  const dialogRef = useRef<HTMLElement>(null)
   const [step, setStep] = useState<'phone' | 'code'>('phone')
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
@@ -28,6 +29,39 @@ export function AuthDialog({ isOpen, user, onClose, onAuthenticated, onLoggedOut
   useEffect(() => {
     if (!isOpen || !user) setAccountView('profile')
   }, [isOpen, user])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const previousOverflow = document.body.style.overflow
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isSubmitting) onClose()
+      if (event.key !== 'Tab') return
+      const controls = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), input:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])',
+      ) ?? [])
+      if (controls.length === 0) return
+      const first = controls[0]
+      const last = controls[controls.length - 1]
+      if (!controls.includes(document.activeElement as HTMLElement)) {
+        event.preventDefault()
+        ;(event.shiftKey ? last : first).focus()
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', closeOnEscape)
+    const focusFrame = window.requestAnimationFrame(() => dialogRef.current?.focus())
+    return () => {
+      window.cancelAnimationFrame(focusFrame)
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [accountView, isOpen, isSubmitting, onClose])
 
   if (!isOpen) return null
 
@@ -73,9 +107,9 @@ export function AuthDialog({ isOpen, user, onClose, onAuthenticated, onLoggedOut
 
   return (
     <div className="auth-layer">
-      <button className="auth-backdrop" onClick={onClose} aria-label="Закрыть окно авторизации" />
-      <section className={`auth-dialog ${user && accountView === 'orders' ? 'orders-history-dialog' : ''}`} role="dialog" aria-modal="true" aria-labelledby="auth-title">
-        <button className="auth-close icon-button" onClick={onClose} aria-label="Закрыть"><X size={21} /></button>
+      <button className="auth-backdrop" type="button" onClick={onClose} aria-label="Закрыть окно авторизации" />
+      <section ref={dialogRef} tabIndex={-1} className={`auth-dialog ${user && accountView === 'orders' ? 'orders-history-dialog' : ''}`} role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <button className="auth-close icon-button" type="button" onClick={onClose} aria-label="Закрыть"><X size={21} /></button>
 
         {user && accountView === 'orders' ? (
           <CustomerOrders onBack={() => setAccountView('profile')} onSessionExpired={onLoggedOut} />
@@ -87,7 +121,7 @@ export function AuthDialog({ isOpen, user, onClose, onAuthenticated, onLoggedOut
             <p className="account-phone">{user.phone}</p>
             <span className="account-role">Роль: {user.role === 'admin' ? 'администратор' : 'покупатель'}</span>
             <button className="primary-button account-orders-button" type="button" onClick={() => setAccountView('orders')}><PackageSearch size={17} /> Мои заказы</button>
-            <button className="secondary-button" onClick={logout} disabled={isSubmitting}><LogOut size={16} /> Выйти</button>
+            <button className="secondary-button" type="button" onClick={() => void logout()} disabled={isSubmitting}><LogOut size={16} /> Выйти</button>
           </div>
         ) : (
           <div className="auth-content">

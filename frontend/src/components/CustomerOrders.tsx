@@ -1,5 +1,5 @@
 import { ArrowLeft, ChevronDown, PackageOpen, RefreshCw } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import {
   getMyOrder,
@@ -26,6 +26,17 @@ const paymentLabels: Record<string, string> = {
   succeeded: 'Оплачен',
   cancelled: 'Оплата отменена',
   refunded: 'Возврат выполнен',
+}
+
+const PAGE_SIZE = 10
+
+function pluralizeOrders(value: number) {
+  const remainder100 = value % 100
+  const remainder10 = value % 10
+  if (remainder100 >= 11 && remainder100 <= 14) return 'заказов'
+  if (remainder10 === 1) return 'заказ'
+  if (remainder10 >= 2 && remainder10 <= 4) return 'заказа'
+  return 'заказов'
 }
 
 function formatDate(value: string) {
@@ -57,15 +68,22 @@ export function CustomerOrders({ onBack, onSessionExpired }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [details, setDetails] = useState<Record<string, CustomerOrder>>({})
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [error, setError] = useState('')
 
-  async function loadOrders() {
-    setLoading(true)
+  const loadOrders = useCallback(async (offset: number, reset: boolean) => {
+    if (reset) {
+      setLoading(true)
+      setSelectedId(null)
+      setDetails({})
+    } else {
+      setLoadingMore(true)
+    }
     setError('')
     try {
-      const page = await listMyOrders()
-      setOrders(page.items)
+      const page = await listMyOrders(offset, PAGE_SIZE)
+      setOrders(current => reset ? page.items : [...current, ...page.items])
       setTotal(page.total)
     } catch (reason) {
       if (reason instanceof OrderError && reason.status === 401) {
@@ -75,10 +93,11 @@ export function CustomerOrders({ onBack, onSessionExpired }: Props) {
       setError(reason instanceof Error ? reason.message : 'Не удалось загрузить историю заказов')
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
-  }
+  }, [onSessionExpired])
 
-  useEffect(() => { void loadOrders() }, [])
+  useEffect(() => { void loadOrders(0, true) }, [loadOrders])
 
   async function toggleOrder(orderId: string) {
     if (selectedId === orderId) {
@@ -108,7 +127,7 @@ export function CustomerOrders({ onBack, onSessionExpired }: Props) {
     <div className="customer-orders-view">
       <div className="customer-orders-head">
         <button className="auth-back" type="button" onClick={onBack}><ArrowLeft size={15} /> Личный кабинет</button>
-        <button className="orders-refresh" type="button" onClick={() => void loadOrders()} disabled={loading} aria-label="Обновить заказы"><RefreshCw size={16} /></button>
+        <button className="orders-refresh" type="button" onClick={() => void loadOrders(0, true)} disabled={loading}><RefreshCw size={16} /> Обновить</button>
       </div>
       <p className="eyebrow">ИСТОРИЯ ПОКУПОК</p>
       <h2 id="auth-title">Мои заказы.</h2>
@@ -125,13 +144,13 @@ export function CustomerOrders({ onBack, onSessionExpired }: Props) {
         </div>
       ) : (
         <div className="customer-orders-list">
-          <span className="orders-count">{total} {total === 1 ? 'заказ' : total < 5 ? 'заказа' : 'заказов'}</span>
+          <span className="orders-count">{total} {pluralizeOrders(total)}</span>
           {orders.map(order => {
             const detail = details[order.id]
             const isOpen = selectedId === order.id
             return (
               <article className={`customer-order ${isOpen ? 'is-expanded' : ''}`} key={order.id}>
-                <button className="customer-order-summary" type="button" onClick={() => void toggleOrder(order.id)} aria-expanded={isOpen}>
+                <button className="customer-order-summary" type="button" onClick={() => void toggleOrder(order.id)} aria-expanded={isOpen} aria-controls={`order-${order.id}`}>
                   <span className="order-summary-main">
                     <strong>{order.number}</strong>
                     <small>{formatDate(order.created_at)}</small>
@@ -145,7 +164,7 @@ export function CustomerOrders({ onBack, onSessionExpired }: Props) {
                 </button>
 
                 {isOpen && (
-                  <div className="customer-order-detail">
+                  <div className="customer-order-detail" id={`order-${order.id}`}>
                     {loadingDetails && !detail ? <p role="status">Загружаем состав…</p> : detail && (
                       <>
                         <div className="customer-order-items">
@@ -161,9 +180,10 @@ export function CustomerOrders({ onBack, onSessionExpired }: Props) {
                           <span><small>Доставка</small><strong>{Object.values(detail.delivery_address).filter(Boolean).join(', ')}</strong></span>
                           <span><small>Оплата</small><strong>{paymentLabels[detail.payment_status] ?? detail.payment_status}</strong></span>
                         </div>
+                        <div className="timeline-heading">История статусов</div>
                         <ol className="customer-order-timeline" aria-label="История статусов">
-                          {detail.history.map(entry => (
-                            <li key={entry.id}>
+                          {detail.history.map((entry, index) => (
+                            <li key={entry.id} className={index === detail.history.length - 1 ? 'is-current' : ''} aria-current={index === detail.history.length - 1 ? 'step' : undefined}>
                               <i />
                               <span><strong>{statusLabels[entry.to_status]}</strong><small>{formatDate(entry.created_at)}</small></span>
                             </li>
@@ -176,6 +196,11 @@ export function CustomerOrders({ onBack, onSessionExpired }: Props) {
               </article>
             )
           })}
+          {orders.length < total && (
+            <button className="load-more-orders" type="button" onClick={() => void loadOrders(orders.length, false)} disabled={loadingMore}>
+              {loadingMore ? 'Загружаем…' : 'Показать ещё'}
+            </button>
+          )}
         </div>
       )}
     </div>

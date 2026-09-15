@@ -35,6 +35,12 @@ def ensure_status_transition(current: str, target: str) -> None:
         raise OrderConflict(f"Переход из статуса {current} в {target} запрещён")
 
 
+def payment_status_after_order_transition(payment_status: str, target: str) -> str:
+    if target == "cancelled" and payment_status in {"pending", "waiting"}:
+        return "cancelled"
+    return payment_status
+
+
 def to_admin_order(order: Order) -> AdminOrderResponse:
     return AdminOrderResponse(
         id=order.id,
@@ -112,6 +118,7 @@ class OrderAdminService:
         ensure_status_transition(order.status, body.status)
         previous = order.status
         order.status = body.status
+        order.payment_status = payment_status_after_order_transition(order.payment_status, body.status)
         order.history.append(
             OrderStatusHistory(
                 from_status=previous,

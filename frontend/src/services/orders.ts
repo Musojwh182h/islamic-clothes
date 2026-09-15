@@ -87,8 +87,9 @@ export async function createOrder(items: CartItem[], details: DeliveryDetails, k
   )
 }
 
-export async function listMyOrders(): Promise<CustomerOrderPage> {
-  const response = await authenticatedRequest(`${API}?offset=0&limit=50`)
+export async function listMyOrders(offset = 0, limit = 10): Promise<CustomerOrderPage> {
+  const params = new URLSearchParams({ offset: String(offset), limit: String(limit) })
+  const response = await authenticatedRequest(`${API}?${params}`)
   return parseOrderResponse<CustomerOrderPage>(response, 'Не удалось загрузить историю заказов')
 }
 
