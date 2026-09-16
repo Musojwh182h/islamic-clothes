@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -84,6 +84,19 @@ async def update_product(
     except CatalogConflict as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     return to_admin_product(product)
+
+
+@router.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_product(
+    product_id: uuid.UUID,
+    admin: AuthenticatedAdmin = Depends(require_admin),
+    session: AsyncSession = Depends(get_db_session),
+) -> Response:
+    try:
+        await ProductAdminService(session).delete(product_id, admin.user_id)
+    except CatalogNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.patch("/products/{product_id}/variants/{variant_id}/stock", response_model=AdminProductResponse)

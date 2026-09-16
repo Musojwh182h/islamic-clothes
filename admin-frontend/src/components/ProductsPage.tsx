@@ -6,6 +6,7 @@ import {
   Input,
   MessageBar,
   MessageBarBody,
+  Select,
   Skeleton,
   SkeletonItem,
   Table,
@@ -17,12 +18,14 @@ import {
   Text,
   Title1,
 } from '@fluentui/react-components'
-import { AddRegular, ArrowClockwiseRegular, EditRegular, SearchRegular } from '@fluentui/react-icons'
+import { AddRegular, ArrowClockwiseRegular, DeleteRegular, EditRegular, SearchRegular } from '@fluentui/react-icons'
 
 import { formatRoubles } from '../lib/format'
 import { AdminApi, ApiError } from '../services/api'
 import type { AdminProduct } from '../types'
 import { ProductDialog } from './ProductDialog'
+
+type ProductVisibility = 'active' | 'archived' | 'all'
 
 export function ProductsPage({ api }: { api: AdminApi }) {
   const [products, setProducts] = useState<AdminProduct[]>([])
@@ -33,12 +36,17 @@ export function ProductsPage({ api }: { api: AdminApi }) {
   const [error, setError] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selected, setSelected] = useState<AdminProduct | null>(null)
+  const [visibility, setVisibility] = useState<ProductVisibility>('active')
+  const [deleteTarget, setDeleteTarget] = useState<AdminProduct | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const page = await api.listProducts(appliedQuery)
+      const isActive = visibility === 'all' ? undefined : visibility === 'active'
+      const page = await api.listProducts(appliedQuery, 0, isActive)
       setProducts(page.items)
       setTotal(page.total)
     } catch (reason) {
@@ -46,7 +54,7 @@ export function ProductsPage({ api }: { api: AdminApi }) {
     } finally {
       setLoading(false)
     }
-  }, [api, appliedQuery])
+  }, [api, appliedQuery, visibility])
 
   useEffect(() => { void load() }, [load])
 
@@ -60,12 +68,34 @@ export function ProductsPage({ api }: { api: AdminApi }) {
     setDialogOpen(true)
   }
 
+  function openDelete(product: AdminProduct) {
+    setDeleteError('')
+    setDeleteTarget(product)
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget || deleting) return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      await api.deleteProduct(deleteTarget.id)
+      setDeleteTarget(null)
+      await load()
+    } catch (reason) {
+      setDeleteError(reason instanceof ApiError ? reason.message : 'Не удалось удалить товар')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <main className="page-shell">
       <header className="page-header">
         <div>
           <Title1>Товары</Title1>
-          <Text block className="muted-copy">{total} позиций в каталоге</Text>
+          <Text block className="muted-copy">
+            {total} {visibility === 'archived' ? 'товаров в архиве' : visibility === 'all' ? 'товаров всего' : 'активных товаров'}
+          </Text>
         </div>
         <Button appearance="primary" icon={<AddRegular />} onClick={openCreate}>Добавить товар</Button>
       </header>
@@ -79,6 +109,16 @@ export function ProductsPage({ api }: { api: AdminApi }) {
             onKeyDown={event => { if (event.key === 'Enter') setAppliedQuery(query) }}
           />
         </Field>
+        <Field label="Показывать" className="status-filter">
+          <Select
+            value={visibility}
+            onChange={event => setVisibility(event.target.value as ProductVisibility)}
+          >
+            <option value="active">Активные товары</option>
+            <option value="archived">Архив</option>
+            <option value="all">Все товары</option>
+          </Select>
+        </Field>
         <Button appearance="secondary" onClick={() => setAppliedQuery(query)}>Найти</Button>
         <Button appearance="subtle" icon={<ArrowClockwiseRegular />} onClick={load}>Обновить</Button>
       </section>
@@ -90,9 +130,15 @@ export function ProductsPage({ api }: { api: AdminApi }) {
           <TableSkeleton />
         ) : products.length === 0 ? (
           <div className="empty-state">
-            <Text weight="semibold" size={500}>Товары не найдены</Text>
-            <Text block className="muted-copy">Измените запрос или добавьте первую позицию.</Text>
-            <Button appearance="primary" icon={<AddRegular />} onClick={openCreate}>Добавить товар</Button>
+            <Text weight="semibold" size={500}>{visibility === 'archived' ? 'Архив пуст' : 'Товары не найдены'}</Text>
+            <Text block className="muted-copy">
+              {visibility === 'archived'
+                ? 'Удалённые товары появятся здесь и останутся доступными для восстановления.'
+                : 'Измените запрос или добавьте первую позицию.'}
+            </Text>
+            {visibility !== 'archived' && (
+              <Button appearance="primary" icon={<AddRegular />} onClick={openCreate}>Добавить товар</Button>
+            )}
           </div>
         ) : (
           <div className="table-scroll">
@@ -137,9 +183,21 @@ export function ProductsPage({ api }: { api: AdminApi }) {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Button appearance="subtle" icon={<EditRegular />} onClick={() => openEdit(product)}>
-                          Изменить
-                        </Button>
+                        <div className="table-actions">
+                          <Button appearance="subtle" icon={<EditRegular />} onClick={() => openEdit(product)}>
+                            Изменить
+                          </Button>
+                          {product.is_active && (
+                            <Button
+                              appearance="subtle"
+                              className="danger-action"
+                              icon={<DeleteRegular />}
+                              onClick={() => openDelete(product)}
+                            >
+                              Удалить
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -157,6 +215,44 @@ export function ProductsPage({ api }: { api: AdminApi }) {
         onClose={() => setDialogOpen(false)}
         onSaved={() => { setDialogOpen(false); void load() }}
       />
+
+      {deleteTarget && (
+        <div className="admin-modal-layer">
+          <button
+            type="button"
+            className="admin-modal-backdrop"
+            aria-label="Закрыть подтверждение удаления"
+            onClick={() => { if (!deleting) setDeleteTarget(null) }}
+          />
+          <section
+            className="admin-modal-surface delete-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-product-title"
+            aria-describedby="delete-product-description"
+          >
+            <div>
+              <h2 id="delete-product-title">Удалить товар?</h2>
+              <Text id="delete-product-description" block className="muted-copy">
+                «{deleteTarget.name}» исчезнет из магазина и будет перенесён в архив. Старые заказы и изображения сохранятся.
+              </Text>
+            </div>
+            {deleteError && <MessageBar intent="error"><MessageBarBody>{deleteError}</MessageBarBody></MessageBar>}
+            <div className="admin-modal-actions">
+              <Button autoFocus disabled={deleting} onClick={() => setDeleteTarget(null)}>Отмена</Button>
+              <Button
+                appearance="primary"
+                className="delete-confirm-button"
+                icon={<DeleteRegular />}
+                disabled={deleting}
+                onClick={() => void confirmDelete()}
+              >
+                {deleting ? 'Удаляем…' : 'Удалить товар'}
+              </Button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   )
 }

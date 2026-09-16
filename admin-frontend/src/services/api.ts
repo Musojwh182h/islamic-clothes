@@ -97,9 +97,10 @@ export class AdminApi {
     }
   }
 
-  async listProducts(query = '', offset = 0): Promise<ProductPage> {
+  async listProducts(query = '', offset = 0, isActive?: boolean): Promise<ProductPage> {
     const params = new URLSearchParams({ offset: String(offset), limit: '50' })
     if (query.trim()) params.set('query', query.trim())
+    if (typeof isActive === 'boolean') params.set('is_active', String(isActive))
     return this.request(`${CATALOG_ADMIN_API_URL}/products?${params}`)
   }
 
@@ -116,6 +117,12 @@ export class AdminApi {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+    })
+  }
+
+  async deleteProduct(productId: string): Promise<void> {
+    return this.request(`${CATALOG_ADMIN_API_URL}/products/${productId}`, {
+      method: 'DELETE',
     })
   }
 

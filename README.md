@@ -32,13 +32,16 @@ docker compose up --build
 - media API — `http://localhost:8104/docs`;
 - MinIO API — `http://localhost:9000`, консоль — `http://localhost:9001`;
 - RabbitMQ — `http://localhost:15673`.
+- витрина — `http://localhost:5173`;
 - админка — `http://localhost:5174`.
 
 Внешние PostgreSQL и Redis доступны на `5433` и `6380`, чтобы не пересекаться со стандартными сервисами на компьютере.
 
 Перед совместной или публичной установкой скопируйте `.env.example` в `.env` и замените все пароли и секреты. `.env` исключён из Git. Значения MinIO по умолчанию предназначены только для локального запуска.
 
-### Витрина
+### Витрина без Docker (режим разработки)
+
+При обычном запуске `docker compose up --build` витрина уже работает на `http://localhost:5173`. Отдельно запускать Vite не нужно. Для разработки с горячим обновлением:
 
 ```powershell
 cd frontend
@@ -69,6 +72,7 @@ npm run dev
 - `POST http://localhost:8104/api/v1/media/images` — загружает JPEG/PNG/WebP, нормализует в WebP и требует access token пользователя с ролью `admin`.
 - `DELETE http://localhost:8104/api/v1/media/images/{object_key}` — удаляет объект и требует роль `admin`.
 - `GET/POST/PUT http://localhost:8101/api/v1/admin/catalog/products` — просмотр, создание и редактирование товаров.
+- `DELETE http://localhost:8101/api/v1/admin/catalog/products/{product_id}` — безопасное удаление товара в архив с сохранением истории заказов.
 - `PATCH http://localhost:8101/api/v1/admin/catalog/products/{product_id}/variants/{variant_id}/stock` — изменение остатка с записью в аудит.
 - `GET http://localhost:8103/api/v1/admin/orders` — поиск и фильтрация заказов.
 - `POST http://localhost:8103/api/v1/orders` — оформление заказа авторизованным пользователем; требует заголовки `Authorization` и `Idempotency-Key`.

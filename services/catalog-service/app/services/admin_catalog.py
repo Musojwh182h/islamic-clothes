@@ -146,6 +146,28 @@ class ProductAdminService:
         await self._commit_or_conflict()
         return await self._reload(product_id)
 
+    async def delete(self, product_id: uuid.UUID, actor_user_id: uuid.UUID) -> None:
+        """Archive a product while preserving references from historical orders."""
+        product = await self.repository.get_admin_by_id(product_id, for_update=True)
+        if product is None:
+            raise CatalogNotFound("Товар не найден")
+
+        # DELETE remains idempotent: a repeated request does not create another audit event.
+        if not product.is_active:
+            return
+
+        product.is_active = False
+        for variant in product.variants:
+            variant.is_active = False
+        product.updated_at = datetime.now(UTC)
+        self._audit(
+            actor_user_id,
+            "catalog.product_deleted",
+            product.id,
+            {"slug": product.slug, "mode": "soft_delete"},
+        )
+        await self._commit_or_conflict()
+
     def _sync_variants(self, product: Product, data: AdminProductUpdate) -> None:
         existing = {variant.id: variant for variant in product.variants}
         retained: set[uuid.UUID] = set()
