@@ -12,7 +12,7 @@ class User(TimestampMixin, Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    phone: Mapped[str] = mapped_column(String(16), unique=True, index=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(320), unique=True, index=True, nullable=False)
     role: Mapped[str] = mapped_column(String(20), default="customer", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

@@ -9,7 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 @dataclass(frozen=True)
 class AuthenticatedAdmin:
     user_id: uuid.UUID
-    phone: str
+    email: str
 
 
 class AdminAuthorizer:
@@ -55,7 +55,7 @@ class AdminAuthorizer:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Сервис авторизации вернул некорректный ответ",
             ) from exc
-        return AuthenticatedAdmin(user_id=user_id, phone=user["phone"])
+        return AuthenticatedAdmin(user_id=user_id, email=user["email"])
 
 
 def get_admin_authorizer(request: Request) -> AdminAuthorizer:

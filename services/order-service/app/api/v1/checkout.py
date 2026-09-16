@@ -17,7 +17,7 @@ bearer = HTTPBearer(auto_error=False)
 
 async def require_user(request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> uuid.UUID:
     if credentials is None:
-        raise HTTPException(401, "Войдите по номеру телефона", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(401, "Войдите по электронной почте", headers={"WWW-Authenticate": "Bearer"})
     try:
         response = await request.app.state.checkout_client.get(get_settings().auth_me_url,
                     headers={"Authorization": f"Bearer {credentials.credentials}"})

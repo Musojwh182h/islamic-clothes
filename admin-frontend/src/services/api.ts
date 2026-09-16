@@ -61,20 +61,20 @@ export class AdminApi {
     }
   }
 
-  async requestCode(phone: string): Promise<{ debug_code?: string | null; retry_after_seconds: number }> {
+  async requestCode(email: string): Promise<{ debug_code?: string | null; retry_after_seconds: number }> {
     return this.publicRequest(`${AUTH_API_URL}/request-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ email }),
     })
   }
 
-  async verifyCode(phone: string, code: string): Promise<AuthSession> {
+  async verifyCode(email: string, code: string): Promise<AuthSession> {
     const session = await this.publicRequest<AuthSession>(`${AUTH_API_URL}/verify-code`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, code }),
+      body: JSON.stringify({ email, code }),
     })
     if (session.user.role !== 'admin' || !session.user.is_active) {
       this.accessToken = session.access_token

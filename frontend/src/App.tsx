@@ -156,7 +156,7 @@ export default function App() {
         </nav>
         <div className="header-actions">
           <button className="icon-button search-button" aria-label="Поиск"><Search size={20} /></button>
-          <button className={`account-button ${authUser ? 'is-authenticated' : ''}`} onClick={() => setAuthOpen(true)} aria-label={authUser ? `Личный кабинет ${authUser.phone}` : 'Войти'}><UserRound size={20} /><span>{authUser ? authUser.phone : 'Войти'}</span></button>
+          <button className={`account-button ${authUser ? 'is-authenticated' : ''}`} onClick={() => setAuthOpen(true)} aria-label={authUser ? `Личный кабинет ${authUser.email}` : 'Войти'}><UserRound size={20} /><span>{authUser ? authUser.email : 'Войти'}</span></button>
           <button className="bag-button" onClick={() => setCartOpen(true)} aria-label={`Корзина, товаров: ${itemCount}`}><ShoppingBag size={20} /><span>{itemCount}</span></button>
           <button className="icon-button menu-button" onClick={() => setMenuOpen(!isMenuOpen)} aria-label="Открыть меню">{isMenuOpen ? <X /> : <Menu />}</button>
         </div>
@@ -185,7 +185,7 @@ export default function App() {
       <footer className="site-footer"><Logo /><p>Мужская исламская одежда с достоинством.</p><div><a href="#top">Telegram</a><a href="#top">Instagram</a><span>© 2026 SABR</span></div></footer>
       {notice && <div className="toast" role="status">{notice}</div>}
       <CartDrawer items={cartItems} isOpen={isCartOpen} onClose={() => setCartOpen(false)} onChangeQuantity={changeQuantity} onRemove={removeItem} onCheckout={openCheckout} />
-      <CheckoutDialog items={cartItems} isOpen={isCheckoutOpen} orderNumber={orderNumber} busy={orderBusy} error={orderError} totalSaved={orderTotal} phone={authUser?.phone ?? ''} onBack={() => { if (!orderBusy) { setCheckoutOpen(false); setCartOpen(true) } }} onClose={() => { if (!orderBusy) setCheckoutOpen(false) }} onSubmit={placeOrder} />
+      <CheckoutDialog items={cartItems} isOpen={isCheckoutOpen} orderNumber={orderNumber} busy={orderBusy} error={orderError} totalSaved={orderTotal} phone="" onBack={() => { if (!orderBusy) { setCheckoutOpen(false); setCartOpen(true) } }} onClose={() => { if (!orderBusy) setCheckoutOpen(false) }} onSubmit={placeOrder} />
       <AuthDialog isOpen={isAuthOpen} user={authUser} onClose={() => { setAuthOpen(false); setCheckoutAfterLogin(false) }} onAuthenticated={user => { setAuthUser(user); setAuthOpen(false); if (checkoutAfterLogin) { setCheckoutAfterLogin(false); setCheckoutOpen(true) } }} onLoggedOut={() => { setAuthUser(null); setCartItems([]); setCheckoutOpen(false); setAuthOpen(false) }} />
     </main>
   )

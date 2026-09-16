@@ -156,6 +156,11 @@ textarea {
   color: var(--colorNeutralForeground3);
 }
 
+.sidebar-email {
+  max-width: 190px;
+  overflow-wrap: anywhere;
+}
+
 .sidebar-nav {
   display: grid;
   gap: 4px;

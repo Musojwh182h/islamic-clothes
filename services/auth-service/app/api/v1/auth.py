@@ -20,20 +20,13 @@ from app.schemas.auth import (
     VerifyCodeRequest,
 )
 from app.services.events import EventPublisher
+from app.services.email import normalize_email
 from app.services.otp import OtpService
-from app.services.phone import InvalidPhoneNumber, normalize_russian_phone
 from app.services.tokens import AuthTokenError, TokenService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
 token_service = TokenService(settings)
-
-
-def normalize_or_422(phone: str) -> str:
-    try:
-        return normalize_russian_phone(phone)
-    except InvalidPhoneNumber as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
 
 def token_response(user: User, access: str) -> TokenPairResponse:
@@ -62,9 +55,9 @@ async def request_code(
     redis: Redis = Depends(get_redis),
     publisher: EventPublisher = Depends(get_publisher),
 ) -> RequestCodeResponse:
-    phone = normalize_or_422(body.phone)
+    email = normalize_email(body.email)
     otp = OtpService(redis, settings)
-    code, allowed = await otp.issue(phone)
+    code, allowed = await otp.issue(email)
     if not allowed:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -73,17 +66,17 @@ async def request_code(
         )
     try:
         await publisher.publish(
-            "auth.sms_code_requested",
-            {"phone": phone, "code": code, "expires_in_seconds": settings.otp_ttl_seconds},
+            "auth.email_code_requested",
+            {"email": email, "code": code, "expires_in_seconds": settings.otp_ttl_seconds},
         )
     except (AMQPException, RuntimeError) as exc:
-        await otp.cancel(phone)
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Сервис отправки SMS временно недоступен") from exc
+        await otp.cancel(email)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Сервис отправки писем временно недоступен") from exc
     return RequestCodeResponse(
         message="Код отправлен",
         retry_after_seconds=settings.otp_cooldown_seconds,
         expires_in_seconds=settings.otp_ttl_seconds,
-        debug_code=code if settings.sms_provider == "mock" else None,
+        debug_code=code if settings.email_provider == "mock" else None,
     )
 
 
@@ -94,8 +87,8 @@ async def verify_code(
     redis: Redis = Depends(get_redis),
     session: AsyncSession = Depends(get_db_session),
 ) -> TokenPairResponse:
-    phone = normalize_or_422(body.phone)
-    result = await OtpService(redis, settings).verify(phone, body.code)
+    email = normalize_email(body.email)
+    result = await OtpService(redis, settings).verify(email, body.code)
     if result == -1:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Код истёк или не был запрошен")
     if result == -2:
@@ -103,9 +96,9 @@ async def verify_code(
     if result > 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный код")
 
-    user = await session.scalar(select(User).where(User.phone == phone))
+    user = await session.scalar(select(User).where(User.email == email))
     if user is None:
-        user = User(phone=phone)
+        user = User(email=email)
         session.add(user)
         await session.flush()
     if not user.is_active:

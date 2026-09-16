@@ -8,7 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 @dataclass(frozen=True)
 class AuthenticatedAdmin:
     user_id: str
-    phone: str
+    email: str
 
 
 class AdminAuthorizer:
@@ -47,7 +47,7 @@ class AdminAuthorizer:
         user = response.json()
         if user.get("role") != "admin" or not user.get("is_active"):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
-        return AuthenticatedAdmin(user_id=user["id"], phone=user["phone"])
+        return AuthenticatedAdmin(user_id=user["id"], email=user["email"])
 
 
 def get_authorizer(request: Request) -> AdminAuthorizer:

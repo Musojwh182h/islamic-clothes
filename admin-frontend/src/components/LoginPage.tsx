@@ -20,19 +20,19 @@ type LoginPageProps = {
 }
 
 export function LoginPage({ api, onAuthenticated }: LoginPageProps) {
-  const [phone, setPhone] = useState('+7 ')
+  const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
-  const [step, setStep] = useState<'phone' | 'code'>('phone')
+  const [step, setStep] = useState<'email' | 'code'>('email')
   const [debugCode, setDebugCode] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  async function submitPhone(event: FormEvent) {
+  async function submitEmail(event: FormEvent) {
     event.preventDefault()
     setError('')
     setBusy(true)
     try {
-      const response = await api.requestCode(phone)
+      const response = await api.requestCode(email)
       setDebugCode(response.debug_code ?? null)
       setStep('code')
     } catch (reason) {
@@ -47,7 +47,7 @@ export function LoginPage({ api, onAuthenticated }: LoginPageProps) {
     setError('')
     setBusy(true)
     try {
-      onAuthenticated(await api.verifyCode(phone, code))
+      onAuthenticated(await api.verifyCode(email, code))
     } catch (reason) {
       setError(reason instanceof ApiError ? reason.message : 'Не удалось выполнить вход')
     } finally {
@@ -68,7 +68,7 @@ export function LoginPage({ api, onAuthenticated }: LoginPageProps) {
         <div className="login-lock" aria-hidden="true"><LockClosedRegular /></div>
         <div>
           <Text weight="semibold" size={500}>Вход администратора</Text>
-          <Text block className="muted-copy">Доступ подтверждается одноразовым кодом на телефон владельца.</Text>
+          <Text block className="muted-copy">Доступ подтверждается одноразовым кодом из письма.</Text>
         </div>
 
         {error && (
@@ -77,14 +77,15 @@ export function LoginPage({ api, onAuthenticated }: LoginPageProps) {
           </MessageBar>
         )}
 
-        {step === 'phone' ? (
-          <form className="form-stack" onSubmit={submitPhone}>
-            <Field label="Номер телефона" required>
+        {step === 'email' ? (
+          <form className="form-stack" onSubmit={submitEmail}>
+            <Field label="Электронная почта" required>
               <Input
-                type="tel"
-                autoComplete="tel"
-                value={phone}
-                onChange={(_, data) => setPhone(data.value)}
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(_, data) => setEmail(data.value)}
+                placeholder="admin@example.com"
               />
             </Field>
             <Button type="submit" appearance="primary" icon={<ArrowRightRegular />} iconPosition="after" disabled={busy}>
@@ -93,7 +94,7 @@ export function LoginPage({ api, onAuthenticated }: LoginPageProps) {
           </form>
         ) : (
           <form className="form-stack" onSubmit={submitCode}>
-            <Field label="Код из SMS" required hint={`Код отправлен на ${phone}`}>
+            <Field label="Код из письма" required hint={`Код отправлен на ${email}`}>
               <Input
                 inputMode="numeric"
                 autoComplete="one-time-code"
@@ -110,8 +111,8 @@ export function LoginPage({ api, onAuthenticated }: LoginPageProps) {
             <Button type="submit" appearance="primary" disabled={busy || code.length !== 6}>
               {busy ? 'Проверяем' : 'Войти'}
             </Button>
-            <Button type="button" appearance="subtle" onClick={() => { setStep('phone'); setCode(''); setError('') }}>
-              Изменить номер
+            <Button type="button" appearance="subtle" onClick={() => { setStep('email'); setCode(''); setError('') }}>
+              Изменить почту
             </Button>
           </form>
         )}

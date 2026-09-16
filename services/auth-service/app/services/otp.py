@@ -28,37 +28,37 @@ class OtpService:
         self.redis = redis
         self.settings = settings
 
-    def _key(self, kind: str, phone: str) -> str:
-        phone_digits = phone.removeprefix("+")
-        return f"auth:otp:{kind}:{phone_digits}"
+    def _key(self, kind: str, identifier: str) -> str:
+        identifier_hash = hashlib.sha256(identifier.encode()).hexdigest()
+        return f"auth:otp:{kind}:{identifier_hash}"
 
-    def _hash(self, phone: str, code: str) -> str:
-        value = f"{phone}:{code}".encode()
+    def _hash(self, identifier: str, code: str) -> str:
+        value = f"{identifier}:{code}".encode()
         return hmac.new(self.settings.otp_secret.encode(), value, hashlib.sha256).hexdigest()
 
-    async def issue(self, phone: str) -> tuple[str, bool]:
-        cooldown_key = self._key("cooldown", phone)
+    async def issue(self, identifier: str) -> tuple[str, bool]:
+        cooldown_key = self._key("cooldown", identifier)
         allowed = await self.redis.set(cooldown_key, "1", ex=self.settings.otp_cooldown_seconds, nx=True)
         if not allowed:
             return "", False
 
         code = f"{secrets.randbelow(1_000_000):06d}"
         async with self.redis.pipeline(transaction=True) as pipe:
-            pipe.set(self._key("code", phone), self._hash(phone, code), ex=self.settings.otp_ttl_seconds)
-            pipe.delete(self._key("attempts", phone))
+            pipe.set(self._key("code", identifier), self._hash(identifier, code), ex=self.settings.otp_ttl_seconds)
+            pipe.delete(self._key("attempts", identifier))
             await pipe.execute()
         return code, True
 
-    async def cancel(self, phone: str) -> None:
-        await self.redis.delete(self._key("code", phone), self._key("cooldown", phone))
+    async def cancel(self, identifier: str) -> None:
+        await self.redis.delete(self._key("code", identifier), self._key("cooldown", identifier))
 
-    async def verify(self, phone: str, code: str) -> int:
+    async def verify(self, identifier: str, code: str) -> int:
         result = await self.redis.eval(
             VERIFY_SCRIPT,
             2,
-            self._key("code", phone),
-            self._key("attempts", phone),
-            self._hash(phone, code),
+            self._key("code", identifier),
+            self._key("attempts", identifier),
+            self._hash(identifier, code),
             self.settings.otp_ttl_seconds,
             self.settings.otp_max_attempts,
         )

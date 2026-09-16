@@ -283,6 +283,13 @@
   }
 }
 
+.account-email {
+  max-width: 100%;
+  margin: 18px 0 6px;
+  overflow-wrap: anywhere;
+  font: 500 16px/1.35 'DM Mono';
+}
+
 @media (prefers-reduced-motion: reduce) {
   .auth-dialog,
   .order-chevron {

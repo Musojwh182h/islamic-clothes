@@ -6,11 +6,11 @@
 
 - **Frontend:** React 19, TypeScript, Vite. Адаптивная витрина и отдельный административный клиент на Fluent UI.
 - **Backend:** отдельные FastAPI-сервисы `catalog-api`, `auth-api`, `orders-api`, `media-api`; SQLAlchemy 2 (async), asyncpg, Pydantic Settings.
-- **Авторизация:** SMS OTP с TTL и rate limit в Redis, пользователи и refresh-сессии в PostgreSQL, JWT access-token и HttpOnly refresh-cookie.
+- **Авторизация:** email OTP через Resend с TTL и rate limit в Redis, пользователи и refresh-сессии в PostgreSQL, JWT access-token и HttpOnly refresh-cookie.
 - **Каталог:** товары, ключи фотографий, размерные варианты, SKU и остатки в `catalog_db`; цены хранятся целым числом копеек.
 - **Медиа:** MinIO/S3 для файлов, отдельный пользователь с минимальными правами, публичное чтение только известных ключей товарных изображений и защищённая ролью `admin` загрузка через `media-api`.
 - **Заказы:** корзины пользователей, снимки товарных позиций, история статусов и платежи в `orders_db`.
-- **Данные и процессы:** PostgreSQL, Redis (кэш и временные SMS-коды), RabbitMQ (фоновые события: SMS, письма, статусы заказов).
+- **Данные и процессы:** PostgreSQL, Redis (кэш и временные email-коды), RabbitMQ (фоновые события писем и статусов заказов).
 - **Миграции:** Alembic.
 - **Локальная инфраструктура:** Docker Compose с постоянными volumes для PostgreSQL, Redis, RabbitMQ и MinIO.
 
@@ -61,7 +61,7 @@ npm install
 npm run dev
 ```
 
-По умолчанию локальный администратор создаётся для номера `+79990000000`. При `SMS_PROVIDER=mock` код показывается прямо на экране входа. Номер задаётся переменной `ADMIN_PHONE`; создание роли идемпотентно и не требует ручного SQL.
+Локальный администратор создаётся для адреса из `ADMIN_EMAIL`. При `EMAIL_PROVIDER=mock` код показывается прямо на экране входа. Создание роли идемпотентно и не требует ручного SQL.
 
 ## API-контракты
 
@@ -84,8 +84,8 @@ npm run dev
 ## Авторизация в локальном режиме
 
 1. Нажмите «Войти» в шапке магазина.
-2. Введите российский номер телефона.
-3. При `SMS_PROVIDER=mock` шестизначный тестовый код появится прямо в форме. Он также виден в `docker compose logs notification-worker`.
+2. Введите адрес электронной почты.
+3. При `EMAIL_PROVIDER=mock` шестизначный тестовый код появится прямо в форме. Он также виден в `docker compose logs notification-worker`.
 4. После проверки пользователь создаётся в `auth_db`. Refresh-токен хранится в HttpOnly cookie и недоступен JavaScript.
 
 Основные маршруты `auth-api`:
@@ -95,6 +95,23 @@ npm run dev
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me`
+
+## Подключение Resend
+
+По умолчанию проект использует безопасный локальный режим `EMAIL_PROVIDER=mock`. Для реальной отправки писем сначала подтвердите домен отправителя в Resend, затем создайте новый API-ключ с правом `Sending access` только для этого домена. В корневом `.env` задайте:
+
+```dotenv
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=новый_ключ_из_Resend
+EMAIL_FROM=SABR <login@your-domain.example>
+ADMIN_EMAIL=admin@example.com
+```
+
+Не добавляйте реальный ключ в `.env.example` и Git. После изменения перезапустите сервисы:
+
+```powershell
+docker compose up -d --build auth-api notification-worker storefront admin-frontend
+```
 
 ## Следующие этапы
 

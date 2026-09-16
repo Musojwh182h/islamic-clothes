@@ -136,10 +136,10 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://app:change-me-in-production@rabbitmq:5672/}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
-      SMS_PROVIDER: ${SMS_PROVIDER:-mock}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-mock}
       JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-change-in-production}
       OTP_SECRET: ${OTP_SECRET:-dev-only-otp-secret-change-in-production}
-      ADMIN_PHONE: ${ADMIN_PHONE-+79990000000}
+      ADMIN_EMAIL: ${ADMIN_EMAIL-admin@example.com}
     volumes:
       - ./services/auth-service:/app
     depends_on:
@@ -157,7 +157,9 @@ services:
       context: ./services/notification-worker
     environment:
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://app:change-me-in-production@rabbitmq:5672/}
-      SMS_PROVIDER: ${SMS_PROVIDER:-mock}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-mock}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: "${EMAIL_FROM:-SABR <login@example.com>}"
     volumes:
       - ./services/notification-worker:/app
     depends_on:

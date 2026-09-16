@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://redis:6379/0"
     rabbitmq_url: str = "amqp://app:change-me-in-production@rabbitmq:5672/"
     backend_cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
-    sms_provider: str = "mock"
+    email_provider: str = "mock"
     jwt_secret: str = "dev-only-jwt-secret-change-in-production"
     otp_secret: str = "dev-only-otp-secret-change-in-production"
     access_token_minutes: int = 15
@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     otp_ttl_seconds: int = 300
     otp_cooldown_seconds: int = 60
     otp_max_attempts: int = 5
-    admin_phone: str = ""
+    admin_email: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

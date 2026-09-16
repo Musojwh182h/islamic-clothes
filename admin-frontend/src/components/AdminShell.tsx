@@ -4,7 +4,6 @@ import { BoxRegular, CartRegular, HomeRegular, SignOutRegular } from '@fluentui/
 
 import { AdminApi } from '../services/api'
 import type { AuthSession } from '../types'
-import { formatPhone } from '../lib/format'
 import { OverviewPage } from './OverviewPage'
 import { OrdersPage } from './OrdersPage'
 import { ProductsPage } from './ProductsPage'
@@ -61,7 +60,7 @@ export function AdminShell({ api, session, onLogout }: AdminShellProps) {
         <div className="sidebar-user">
           <div>
             <Text block size={200} className="sidebar-caption">Администратор</Text>
-            <Text weight="semibold">{formatPhone(session.user.phone)}</Text>
+            <Text weight="semibold" className="sidebar-email">{session.user.email}</Text>
           </div>
           <Tooltip content="Выйти" relationship="label">
             <Button appearance="subtle" icon={<SignOutRegular />} onClick={logout} />

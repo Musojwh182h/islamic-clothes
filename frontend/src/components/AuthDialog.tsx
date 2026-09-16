@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, LogOut, PackageSearch, ShieldCheck, Smartphone, X } from 'lucide-react'
+import { ArrowLeft, Check, LogOut, Mail, PackageSearch, ShieldCheck, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { logoutAuthSession, requestLoginCode, verifyLoginCode, type AuthUser } from '../services/auth'
 import { CustomerOrders } from './CustomerOrders'
@@ -13,8 +13,8 @@ type Props = {
 
 export function AuthDialog({ isOpen, user, onClose, onAuthenticated, onLoggedOut }: Props) {
   const dialogRef = useRef<HTMLElement>(null)
-  const [step, setStep] = useState<'phone' | 'code'>('phone')
-  const [phone, setPhone] = useState('')
+  const [step, setStep] = useState<'email' | 'code'>('email')
+  const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [debugCode, setDebugCode] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -70,7 +70,7 @@ export function AuthDialog({ isOpen, user, onClose, onAuthenticated, onLoggedOut
     setSubmitting(true)
     setError('')
     try {
-      const result = await requestLoginCode(phone)
+      const result = await requestLoginCode(email)
       setDebugCode(result.debug_code)
       setStep('code')
     } catch (requestError) {
@@ -85,7 +85,7 @@ export function AuthDialog({ isOpen, user, onClose, onAuthenticated, onLoggedOut
     setSubmitting(true)
     setError('')
     try {
-      const result = await verifyLoginCode(phone, code)
+      const result = await verifyLoginCode(email, code)
       onAuthenticated(result.user)
     } catch (verifyError) {
       setError(verifyError instanceof Error ? verifyError.message : 'Не удалось проверить код')
@@ -99,8 +99,8 @@ export function AuthDialog({ isOpen, user, onClose, onAuthenticated, onLoggedOut
     await logoutAuthSession()
     onLoggedOut()
     setAccountView('profile')
-    setStep('phone')
-    setPhone('')
+    setStep('email')
+    setEmail('')
     setCode('')
     setSubmitting(false)
   }
@@ -118,33 +118,33 @@ export function AuthDialog({ isOpen, user, onClose, onAuthenticated, onLoggedOut
             <span className="auth-symbol"><Check size={27} /></span>
             <p className="eyebrow">ЛИЧНЫЙ КАБИНЕТ</p>
             <h2 id="auth-title">Вы вошли.</h2>
-            <p className="account-phone">{user.phone}</p>
+            <p className="account-email">{user.email}</p>
             <button className="primary-button account-orders-button" type="button" onClick={() => setAccountView('orders')}><PackageSearch size={17} /> Мои заказы</button>
             <button className="secondary-button" type="button" onClick={() => void logout()} disabled={isSubmitting}><LogOut size={16} /> Выйти</button>
           </div>
         ) : (
           <div className="auth-content">
-            <span className="auth-symbol">{step === 'phone' ? <Smartphone size={27} /> : <ShieldCheck size={27} />}</span>
+            <span className="auth-symbol">{step === 'email' ? <Mail size={27} /> : <ShieldCheck size={27} />}</span>
             <p className="eyebrow">ВХОД И РЕГИСТРАЦИЯ</p>
-            <h2 id="auth-title">{step === 'phone' ? 'Ваш номер телефона.' : 'Введите код.'}</h2>
-            <p className="auth-description">{step === 'phone' ? 'Отправим одноразовый код. Если аккаунта ещё нет — создадим его автоматически.' : `Код отправлен на ${phone}`}</p>
+            <h2 id="auth-title">{step === 'email' ? 'Ваша почта.' : 'Введите код.'}</h2>
+            <p className="auth-description">{step === 'email' ? 'Отправим одноразовый код. Если аккаунта ещё нет — создадим его автоматически.' : `Код отправлен на ${email}`}</p>
 
-            {step === 'phone' ? (
+            {step === 'email' ? (
               <form className="auth-form" onSubmit={requestCode}>
-                <label><span>Номер телефона</span><input type="tel" value={phone} onChange={event => setPhone(event.target.value)} autoComplete="tel" required minLength={10} placeholder="+7 999 123-45-67" autoFocus /></label>
+                <label><span>Электронная почта</span><input type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" required maxLength={320} placeholder="you@example.com" autoFocus /></label>
                 {error && <p className="form-error" role="alert">{error}</p>}
                 <button className="primary-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Отправляем…' : 'Получить код'}</button>
               </form>
             ) : (
               <form className="auth-form" onSubmit={verifyCode}>
-                <label><span>Код из SMS</span><input className="code-input" inputMode="numeric" value={code} onChange={event => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} autoComplete="one-time-code" required pattern="\d{6}" placeholder="000000" autoFocus /></label>
+                <label><span>Код из письма</span><input className="code-input" inputMode="numeric" value={code} onChange={event => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} autoComplete="one-time-code" required pattern="\d{6}" placeholder="000000" autoFocus /></label>
                 {debugCode && <div className="debug-code"><span>Тестовый код</span><strong>{debugCode}</strong></div>}
                 {error && <p className="form-error" role="alert">{error}</p>}
                 <button className="primary-button" type="submit" disabled={isSubmitting || code.length !== 6}>{isSubmitting ? 'Проверяем…' : 'Войти'}</button>
-                <button className="auth-back" type="button" onClick={() => { setStep('phone'); setCode(''); setError('') }}><ArrowLeft size={15} /> Изменить номер</button>
+                <button className="auth-back" type="button" onClick={() => { setStep('email'); setCode(''); setError('') }}><ArrowLeft size={15} /> Изменить почту</button>
               </form>
             )}
-            <p className="auth-legal">Продолжая, вы соглашаетесь с обработкой номера телефона для входа в магазин.</p>
+            <p className="auth-legal">Продолжая, вы соглашаетесь с обработкой электронной почты для входа в магазин.</p>
           </div>
         )}
       </section>

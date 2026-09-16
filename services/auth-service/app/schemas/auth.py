@@ -1,28 +1,28 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class RequestCodeRequest(BaseModel):
-    phone: str = Field(min_length=10, max_length=24, examples=["+7 999 123-45-67"])
+    email: EmailStr = Field(examples=["customer@example.com"])
 
 
 class RequestCodeResponse(BaseModel):
     message: str
     retry_after_seconds: int
     expires_in_seconds: int
-    debug_code: str | None = Field(default=None, description="Возвращается только с SMS_PROVIDER=mock")
+    debug_code: str | None = Field(default=None, description="Возвращается только с EMAIL_PROVIDER=mock")
 
 
 class VerifyCodeRequest(BaseModel):
-    phone: str = Field(min_length=10, max_length=24)
+    email: EmailStr
     code: str = Field(pattern=r"^\d{6}$")
 
 
 class UserResponse(BaseModel):
     id: UUID
-    phone: str
+    email: EmailStr
     role: str
     is_active: bool
     created_at: datetime

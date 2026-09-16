@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="SABR Auth Service",
     version="0.2.0",
-    description="Регистрация и вход по одноразовому SMS-коду.",
+    description="Регистрация и вход по одноразовому коду из email.",
     lifespan=lifespan,
 )
 app.add_middleware(

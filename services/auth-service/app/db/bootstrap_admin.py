@@ -5,25 +5,34 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.db.session import AsyncSessionLocal, engine
 from app.models.user import User
-from app.services.phone import InvalidPhoneNumber, normalize_russian_phone
+from app.services.email import InvalidEmailAddress, normalize_email
 
 
 async def bootstrap_admin() -> None:
     settings = get_settings()
-    if not settings.admin_phone.strip():
+    if not settings.admin_email.strip():
         return
     try:
-        phone = normalize_russian_phone(settings.admin_phone)
-    except InvalidPhoneNumber as exc:
-        raise RuntimeError("ADMIN_PHONE must contain a valid Russian phone number") from exc
+        email = normalize_email(settings.admin_email)
+    except InvalidEmailAddress as exc:
+        raise RuntimeError("ADMIN_EMAIL must contain a valid email address") from exc
 
     async with AsyncSessionLocal() as session:
-        user = await session.scalar(select(User).where(User.phone == phone))
+        user = await session.scalar(select(User).where(User.email == email))
         if user is None:
-            session.add(User(phone=phone, role="admin", is_active=True))
+            user = await session.scalar(
+                select(User)
+                .where(User.role == "admin", User.email.like("legacy-%@invalid.local"))
+                .order_by(User.created_at)
+                .limit(1)
+            )
+        if user is None:
+            user = User(email=email, role="admin", is_active=True)
+            session.add(user)
         else:
-            user.role = "admin"
-            user.is_active = True
+            user.email = email
+        user.role = "admin"
+        user.is_active = True
         await session.commit()
     await engine.dispose()
 

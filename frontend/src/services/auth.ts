@@ -2,7 +2,7 @@ const AUTH_API_URL = import.meta.env.VITE_AUTH_API_URL ?? 'http://localhost:8102
 
 export type AuthUser = {
   id: string
-  phone: string
+  email: string
   role: string
   is_active: boolean
   created_at: string
@@ -36,22 +36,22 @@ async function parseResponse<T>(response: Response): Promise<T> {
   throw new Error(message)
 }
 
-export async function requestLoginCode(phone: string): Promise<RequestCodeResponse> {
+export async function requestLoginCode(email: string): Promise<RequestCodeResponse> {
   const response = await fetch(`${AUTH_API_URL}/request-code`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone }),
+    body: JSON.stringify({ email }),
   })
   return parseResponse<RequestCodeResponse>(response)
 }
 
-export async function verifyLoginCode(phone: string, code: string): Promise<TokenResponse> {
+export async function verifyLoginCode(email: string, code: string): Promise<TokenResponse> {
   const response = await fetch(`${AUTH_API_URL}/verify-code`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone, code }),
+    body: JSON.stringify({ email, code }),
   })
   const result = await parseResponse<TokenResponse>(response)
   accessToken = result.access_token

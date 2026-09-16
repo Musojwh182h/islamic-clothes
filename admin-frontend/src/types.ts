@@ -1,6 +1,6 @@
 export type AdminUser = {
   id: string
-  phone: string
+  email: string
   role: string
   is_active: boolean
   created_at: string
