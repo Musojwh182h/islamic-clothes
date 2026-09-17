@@ -6,12 +6,13 @@ import { CustomerOrders } from './CustomerOrders'
 type Props = {
   isOpen: boolean
   user: AuthUser | null
+  initialView?: 'profile' | 'orders'
   onClose: () => void
   onAuthenticated: (user: AuthUser) => void
   onLoggedOut: () => void
 }
 
-export function AuthDialog({ isOpen, user, onClose, onAuthenticated, onLoggedOut }: Props) {
+export function AuthDialog({ isOpen, user, initialView = 'profile', onClose, onAuthenticated, onLoggedOut }: Props) {
   const dialogRef = useRef<HTMLElement>(null)
   const [step, setStep] = useState<'email' | 'code'>('email')
   const [email, setEmail] = useState('')
@@ -27,8 +28,12 @@ export function AuthDialog({ isOpen, user, onClose, onAuthenticated, onLoggedOut
   }, [isOpen, user])
 
   useEffect(() => {
-    if (!isOpen || !user) setAccountView('profile')
-  }, [isOpen, user])
+    if (!isOpen) {
+      setAccountView('profile')
+      return
+    }
+    if (user) setAccountView(initialView)
+  }, [initialView, isOpen, user])
 
   useEffect(() => {
     if (!isOpen) return

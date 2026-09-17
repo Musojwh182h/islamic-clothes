@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowDownRight, Menu, Search, ShoppingBag, UserRound, X } from 'lucide-react'
+import { ArrowDownRight, Menu, PackageSearch, Search, ShoppingBag, UserRound, X } from 'lucide-react'
 import { CartDrawer } from './components/CartDrawer'
 import { CheckoutDialog } from './components/CheckoutDialog'
 import { AuthDialog } from './components/AuthDialog'
@@ -47,6 +47,7 @@ export default function App() {
   const [isCheckoutOpen, setCheckoutOpen] = useState(false)
   const [isAuthOpen, setAuthOpen] = useState(false)
   const [authUser, setAuthUser] = useState<AuthUser | null>(null)
+  const [authInitialView, setAuthInitialView] = useState<'profile' | 'orders'>('profile')
   const [orderNumber, setOrderNumber] = useState<string | null>(null)
   const [checkoutAfterLogin, setCheckoutAfterLogin] = useState(false)
   const [orderBusy, setOrderBusy] = useState(false)
@@ -128,10 +129,25 @@ export default function App() {
     setOrderError('')
     if (!authUser) {
       setCheckoutAfterLogin(true)
+      setAuthInitialView('profile')
       setAuthOpen(true)
       return
     }
     setCheckoutOpen(true)
+  }
+
+  function openAccount() {
+    setCheckoutAfterLogin(false)
+    setAuthInitialView('profile')
+    setAuthOpen(true)
+    setMenuOpen(false)
+  }
+
+  function openOrders() {
+    setCheckoutAfterLogin(false)
+    setAuthInitialView('orders')
+    setAuthOpen(true)
+    setMenuOpen(false)
   }
 
   async function placeOrder(details: DeliveryDetails) {
@@ -139,6 +155,7 @@ export default function App() {
     if (!authUser) {
       setCheckoutOpen(false)
       setCheckoutAfterLogin(true)
+      setAuthInitialView('profile')
       setAuthOpen(true)
       return
     }
@@ -155,6 +172,7 @@ export default function App() {
         setAuthUser(null)
         setCheckoutOpen(false)
         setCheckoutAfterLogin(true)
+        setAuthInitialView('profile')
         setAuthOpen(true)
       } else {
         setOrderError(reason instanceof Error ? reason.message : 'Не удалось отправить заказ. Попробуйте снова')
@@ -169,6 +187,7 @@ export default function App() {
         <Logo />
         <nav className="desktop-nav" aria-label="Основная навигация">
           <a href="#catalog">Каталог</a>
+          <button className="orders-nav-button" type="button" onClick={openOrders}><PackageSearch size={15} /> Мои заказы</button>
         </nav>
         <div className="header-actions">
           <form className={`site-search ${isSearchOpen ? 'is-open' : ''}`} role="search" onSubmit={submitSearch}>
@@ -190,11 +209,11 @@ export default function App() {
               {isSearchOpen ? <X size={20} /> : <Search size={20} />}
             </button>
           </form>
-          <button className={`account-button ${authUser ? 'is-authenticated' : ''}`} onClick={() => setAuthOpen(true)} aria-label={authUser ? `Личный кабинет ${authUser.email}` : 'Войти'}><UserRound size={20} /><span>{authUser ? authUser.email : 'Войти'}</span></button>
+          <button className={`account-button ${authUser ? 'is-authenticated' : ''}`} onClick={openAccount} aria-label={authUser ? `Личный кабинет ${authUser.email}` : 'Войти'}><UserRound size={20} /><span>{authUser ? authUser.email : 'Войти'}</span></button>
           <button className="bag-button" onClick={() => setCartOpen(true)} aria-label={`Корзина, товаров: ${itemCount}`}><ShoppingBag size={20} /><span>{itemCount}</span></button>
           <button className="icon-button menu-button" onClick={() => setMenuOpen(!isMenuOpen)} aria-label="Открыть меню">{isMenuOpen ? <X /> : <Menu />}</button>
         </div>
-        {isMenuOpen && <nav className="mobile-nav"><a href="#catalog" onClick={() => setMenuOpen(false)}>Каталог</a><button onClick={() => setCartOpen(true)}>Корзина ({itemCount})</button></nav>}
+        {isMenuOpen && <nav className="mobile-nav" aria-label="Мобильная навигация"><a href="#catalog" onClick={() => setMenuOpen(false)}>Каталог</a><button type="button" onClick={openOrders}><PackageSearch size={16} /> Мои заказы</button><button type="button" onClick={() => { setCartOpen(true); setMenuOpen(false) }}>Корзина ({itemCount})</button></nav>}
       </header>
 
       <section className="hero" aria-labelledby="hero-title">
@@ -220,7 +239,24 @@ export default function App() {
       {notice && <div className="toast" role="status">{notice}</div>}
       <CartDrawer items={cartItems} isOpen={isCartOpen} onClose={() => setCartOpen(false)} onChangeQuantity={changeQuantity} onRemove={removeItem} onCheckout={openCheckout} />
       <CheckoutDialog items={cartItems} isOpen={isCheckoutOpen} orderNumber={orderNumber} busy={orderBusy} error={orderError} totalSaved={orderTotal} phone="" onBack={() => { if (!orderBusy) { setCheckoutOpen(false); setCartOpen(true) } }} onClose={() => { if (!orderBusy) setCheckoutOpen(false) }} onSubmit={placeOrder} />
-      <AuthDialog isOpen={isAuthOpen} user={authUser} onClose={() => { setAuthOpen(false); setCheckoutAfterLogin(false) }} onAuthenticated={user => { setAuthUser(user); setAuthOpen(false); if (checkoutAfterLogin) { setCheckoutAfterLogin(false); setCheckoutOpen(true) } }} onLoggedOut={() => { setAuthUser(null); setCartItems([]); setCheckoutOpen(false); setAuthOpen(false) }} />
+      <AuthDialog
+        isOpen={isAuthOpen}
+        user={authUser}
+        initialView={authInitialView}
+        onClose={() => { setAuthOpen(false); setCheckoutAfterLogin(false); setAuthInitialView('profile') }}
+        onAuthenticated={user => {
+          setAuthUser(user)
+          if (checkoutAfterLogin) {
+            setCheckoutAfterLogin(false)
+            setAuthInitialView('profile')
+            setAuthOpen(false)
+            setCheckoutOpen(true)
+          } else if (authInitialView !== 'orders') {
+            setAuthOpen(false)
+          }
+        }}
+        onLoggedOut={() => { setAuthUser(null); setCartItems([]); setCheckoutOpen(false); setAuthOpen(false); setAuthInitialView('profile') }}
+      />
     </main>
   )
 }
