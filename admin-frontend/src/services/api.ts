@@ -150,14 +150,12 @@ export class AdminApi {
   async updateOrderStatus(
     order: AdminOrder,
     nextStatus: OrderStatus,
-    comment: string,
   ): Promise<AdminOrder> {
     return this.request(`${ORDERS_ADMIN_API_URL}/${order.id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         status: nextStatus,
-        comment,
         expected_updated_at: order.updated_at,
       }),
     })

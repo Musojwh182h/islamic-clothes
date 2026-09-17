@@ -13,7 +13,6 @@ import {
   TableHeaderCell,
   TableRow,
   Text,
-  Textarea,
 } from '@fluentui/react-components'
 
 import { formatDate, formatRoubles, orderStatusLabels, paymentStatusLabels } from '../lib/format'
@@ -44,13 +43,11 @@ type OrderDialogProps = {
 export function OrderDialog({ api, order, open, onClose, onSaved }: OrderDialogProps) {
   const options = useMemo(() => order ? nextStatuses[order.status] : [], [order])
   const [statusValue, setStatusValue] = useState<OrderStatus | ''>('')
-  const [comment, setComment] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     setStatusValue(options[0] ?? '')
-    setComment('')
     setError('')
   }, [order, options])
 
@@ -74,9 +71,8 @@ export function OrderDialog({ api, order, open, onClose, onSaved }: OrderDialogP
     setSaving(true)
     setError('')
     try {
-      const updated = await api.updateOrderStatus(selectedOrder, selectedStatus, comment)
+      const updated = await api.updateOrderStatus(selectedOrder, selectedStatus)
       setStatusValue(nextStatuses[updated.status][0] ?? '')
-      setComment('')
       onSaved(updated)
     } catch (reason) {
       setError(reason instanceof ApiError ? reason.message : 'Не удалось изменить статус')
@@ -143,7 +139,7 @@ export function OrderDialog({ api, order, open, onClose, onSaved }: OrderDialogP
               {options.length === 0 ? (
                 <div className="compact-empty">Для текущего статуса дальнейшие переходы недоступны.</div>
               ) : (
-                <div className="status-form">
+                <div className="status-form status-form-single">
                   <Field label="Следующий статус" required>
                     <Select
                       value={selectedStatus}
@@ -151,9 +147,6 @@ export function OrderDialog({ api, order, open, onClose, onSaved }: OrderDialogP
                     >
                       {options.map(value => <option key={value} value={value}>{orderStatusLabels[value]}</option>)}
                     </Select>
-                  </Field>
-                  <Field label="Комментарий" hint="Будет сохранён в истории заказа">
-                    <Textarea resize="vertical" value={comment} onChange={(_, data) => setComment(data.value)} />
                   </Field>
                 </div>
               )}

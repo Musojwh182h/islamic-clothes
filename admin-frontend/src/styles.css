@@ -709,6 +709,10 @@ textarea {
   gap: 20px;
 }
 
+.status-form-single {
+  grid-template-columns: minmax(240px, 420px);
+}
+
 .status-form > *,
 .status-form .fui-Select,
 .status-form .fui-Textarea {

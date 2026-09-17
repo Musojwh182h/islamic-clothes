@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowDownRight, ChevronDown, Menu, Search, ShoppingBag, UserRound, X } from 'lucide-react'
+import { ArrowDownRight, Menu, Search, ShoppingBag, UserRound, X } from 'lucide-react'
 import { CartDrawer } from './components/CartDrawer'
 import { CheckoutDialog } from './components/CheckoutDialog'
 import { AuthDialog } from './components/AuthDialog'
@@ -54,12 +54,18 @@ export default function App() {
   const [orderTotal, setOrderTotal] = useState<number | null>(null)
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID())
   const [isMenuOpen, setMenuOpen] = useState(false)
+  const [isSearchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [notice, setNotice] = useState('')
 
-  const shownProducts = useMemo(
-    () => activeCategory === 'Все' ? catalogProducts : catalogProducts.filter(product => product.category === activeCategory),
-    [activeCategory, catalogProducts],
-  )
+  const shownProducts = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLocaleLowerCase('ru-RU')
+    return catalogProducts.filter(product => {
+      const matchesCategory = activeCategory === 'Все' || product.category === activeCategory
+      const matchesName = !normalizedQuery || product.name.toLocaleLowerCase('ru-RU').includes(normalizedQuery)
+      return matchesCategory && matchesName
+    })
+  }, [activeCategory, catalogProducts, searchQuery])
   const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0)
   const categories = ['Все', ...new Set(catalogProducts.map(product => product.category))]
 
@@ -103,6 +109,16 @@ export default function App() {
 
   function removeItem(id: string, size: string) {
     setCartItems(current => current.filter(item => item.id !== id || item.size !== size))
+  }
+
+  function submitSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  function toggleSearch() {
+    if (isSearchOpen) setSearchQuery('')
+    setSearchOpen(current => !current)
   }
 
   function openCheckout() {
@@ -155,7 +171,25 @@ export default function App() {
           <a href="#catalog">Каталог</a>
         </nav>
         <div className="header-actions">
-          <button className="icon-button search-button" aria-label="Поиск"><Search size={20} /></button>
+          <form className={`site-search ${isSearchOpen ? 'is-open' : ''}`} role="search" onSubmit={submitSearch}>
+            {isSearchOpen && (
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={event => {
+                  setSearchQuery(event.target.value)
+                  if (event.target.value.trim()) setActiveCategory('Все')
+                }}
+                onKeyDown={event => { if (event.key === 'Escape') toggleSearch() }}
+                aria-label="Поиск по названию одежды"
+                placeholder="Найти одежду"
+                autoFocus
+              />
+            )}
+            <button className="icon-button search-button" type="button" onClick={toggleSearch} aria-label={isSearchOpen ? 'Закрыть поиск' : 'Открыть поиск'} aria-expanded={isSearchOpen}>
+              {isSearchOpen ? <X size={20} /> : <Search size={20} />}
+            </button>
+          </form>
           <button className={`account-button ${authUser ? 'is-authenticated' : ''}`} onClick={() => setAuthOpen(true)} aria-label={authUser ? `Личный кабинет ${authUser.email}` : 'Войти'}><UserRound size={20} /><span>{authUser ? authUser.email : 'Войти'}</span></button>
           <button className="bag-button" onClick={() => setCartOpen(true)} aria-label={`Корзина, товаров: ${itemCount}`}><ShoppingBag size={20} /><span>{itemCount}</span></button>
           <button className="icon-button menu-button" onClick={() => setMenuOpen(!isMenuOpen)} aria-label="Открыть меню">{isMenuOpen ? <X /> : <Menu />}</button>
@@ -174,10 +208,10 @@ export default function App() {
 
       <section id="catalog" className="catalog section-shell" aria-labelledby="catalog-title">
         <div className="section-heading"><div><p className="eyebrow">ВИТРИНА</p><h2 id="catalog-title">Выберите своё.</h2></div><p>Лаконичные силуэты, которые легко становятся частью повседневной жизни.</p></div>
-        <div className="catalog-tools"><div className="filters" aria-label="Категории">{categories.map(category => <button key={category} className={category === activeCategory ? 'active' : ''} onClick={() => setActiveCategory(category)}>{category}</button>)}</div><button className="sort-button">По популярности <ChevronDown size={16} /></button></div>
+        <div className="catalog-tools"><div className="filters" aria-label="Категории">{categories.map(category => <button key={category} className={category === activeCategory ? 'active' : ''} onClick={() => setActiveCategory(category)}>{category}</button>)}</div></div>
         {catalogError && <p role="alert">{catalogError}</p>}
         {!catalogReady && !catalogError && <p role="status">Загружаем каталог…</p>}
-        {catalogReady && shownProducts.length === 0 && <p>В этой категории пока нет товаров.</p>}
+        {catalogReady && shownProducts.length === 0 && <p>{searchQuery.trim() ? `По запросу «${searchQuery.trim()}» ничего не найдено.` : 'В этой категории пока нет товаров.'}</p>}
         <div className="product-grid">{shownProducts.map(product => <ProductCard key={product.id} product={product} onAdd={addToCart} />)}</div>
       </section>
 
