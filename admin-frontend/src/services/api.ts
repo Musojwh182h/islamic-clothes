@@ -5,6 +5,7 @@ import type {
   MediaObject,
   OrderPage,
   OrderStatus,
+  ProductCategory,
   ProductPage,
   ProductPayload,
 } from '../types'
@@ -104,6 +105,18 @@ export class AdminApi {
     return this.request(`${CATALOG_ADMIN_API_URL}/products?${params}`)
   }
 
+  async listCategories(): Promise<ProductCategory[]> {
+    return this.request(`${CATALOG_ADMIN_API_URL}/categories`)
+  }
+
+  async createCategory(name: string): Promise<ProductCategory> {
+    return this.request(`${CATALOG_ADMIN_API_URL}/categories`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+  }
+
   async createProduct(payload: ProductPayload): Promise<AdminProduct> {
     return this.request(`${CATALOG_ADMIN_API_URL}/products`, {
       method: 'POST',
@@ -123,6 +136,14 @@ export class AdminApi {
   async deleteProduct(productId: string): Promise<void> {
     return this.request(`${CATALOG_ADMIN_API_URL}/products/${productId}`, {
       method: 'DELETE',
+    })
+  }
+
+  async setProductVisibility(product: AdminProduct, isActive: boolean): Promise<AdminProduct> {
+    return this.request(`${CATALOG_ADMIN_API_URL}/products/${product.id}/visibility`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: isActive, expected_updated_at: product.updated_at }),
     })
   }
 

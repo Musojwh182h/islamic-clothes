@@ -5,15 +5,20 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db_session
+from app.repositories.categories import CategoryRepository
 from app.repositories.products import ProductRepository
 from app.schemas.admin import (
+    AdminCategoryCreate,
+    AdminCategoryResponse,
     AdminProductCreate,
     AdminProductPage,
     AdminProductResponse,
     AdminProductUpdate,
+    AdminProductVisibilityUpdate,
     AdminStockUpdate,
 )
 from app.services.admin_auth import AdminAuthorizer, AuthenticatedAdmin, get_admin_authorizer
+from app.services.admin_categories import CategoryAdminService
 from app.services.admin_catalog import CatalogConflict, CatalogNotFound, ProductAdminService, to_admin_product
 
 router = APIRouter(prefix="/admin/catalog", tags=["admin-catalog"])
@@ -25,6 +30,28 @@ async def require_admin(
     authorizer: AdminAuthorizer = Depends(get_admin_authorizer),
 ) -> AuthenticatedAdmin:
     return await authorizer.authorize(credentials)
+
+
+@router.get("/categories", response_model=list[AdminCategoryResponse])
+async def list_categories(
+    _: AuthenticatedAdmin = Depends(require_admin),
+    session: AsyncSession = Depends(get_db_session),
+) -> list[AdminCategoryResponse]:
+    categories = await CategoryRepository(session).list_active()
+    return [AdminCategoryResponse.model_validate(category, from_attributes=True) for category in categories]
+
+
+@router.post("/categories", response_model=AdminCategoryResponse, status_code=status.HTTP_201_CREATED)
+async def create_category(
+    body: AdminCategoryCreate,
+    admin: AuthenticatedAdmin = Depends(require_admin),
+    session: AsyncSession = Depends(get_db_session),
+) -> AdminCategoryResponse:
+    try:
+        category = await CategoryAdminService(session).create(body, admin.user_id)
+    except CatalogConflict as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return AdminCategoryResponse.model_validate(category, from_attributes=True)
 
 
 @router.get("/products", response_model=AdminProductPage)
@@ -79,6 +106,22 @@ async def update_product(
 ) -> AdminProductResponse:
     try:
         product = await ProductAdminService(session).update(product_id, body, admin.user_id)
+    except CatalogNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except CatalogConflict as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return to_admin_product(product)
+
+
+@router.patch("/products/{product_id}/visibility", response_model=AdminProductResponse)
+async def update_product_visibility(
+    product_id: uuid.UUID,
+    body: AdminProductVisibilityUpdate,
+    admin: AuthenticatedAdmin = Depends(require_admin),
+    session: AsyncSession = Depends(get_db_session),
+) -> AdminProductResponse:
+    try:
+        product = await ProductAdminService(session).set_visibility(product_id, body, admin.user_id)
     except CatalogNotFound as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except CatalogConflict as exc:

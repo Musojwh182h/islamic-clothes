@@ -20,13 +20,14 @@ import {
 import { AddRegular, DeleteRegular, ImageAddRegular } from '@fluentui/react-icons'
 
 import { AdminApi, ApiError } from '../services/api'
-import type { AdminProduct, ProductPayload, ProductVariant } from '../types'
+import type { AdminProduct, ProductCategory, ProductPayload, ProductVariant } from '../types'
 import { productAddress, productArticle } from '../lib/productForm'
 
 type ProductDialogProps = {
   api: AdminApi
   open: boolean
   product: AdminProduct | null
+  categories: ProductCategory[]
   onClose: () => void
   onSaved: (product: AdminProduct) => void
 }
@@ -39,7 +40,7 @@ const emptyVariant = (index: number): ProductVariant => ({
   is_active: true,
 })
 
-function initialPayload(product: AdminProduct | null): ProductPayload {
+function initialPayload(product: AdminProduct | null, categories: ProductCategory[]): ProductPayload {
   if (product) {
     return {
       slug: product.slug,
@@ -61,7 +62,7 @@ function initialPayload(product: AdminProduct | null): ProductPayload {
     slug: '',
     name: '',
     description: '',
-    category: 'Кандуры',
+    category: categories[0]?.name ?? '',
     price_kopecks: 0,
     color: '',
     material: '',
@@ -73,9 +74,9 @@ function initialPayload(product: AdminProduct | null): ProductPayload {
   }
 }
 
-export function ProductDialog({ api, open, product, onClose, onSaved }: ProductDialogProps) {
+export function ProductDialog({ api, open, product, categories, onClose, onSaved }: ProductDialogProps) {
   const formId = useId()
-  const [draft, setDraft] = useState<ProductPayload>(() => initialPayload(product))
+  const [draft, setDraft] = useState<ProductPayload>(() => initialPayload(product, categories))
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -84,12 +85,12 @@ export function ProductDialog({ api, open, product, onClose, onSaved }: ProductD
 
   useEffect(() => {
     if (open) {
-      setDraft(initialPayload(product))
+      setDraft(initialPayload(product, categories))
       setError('')
       setAddressEdited(Boolean(product))
       setPreviewUrls(Object.fromEntries((product?.images ?? []).map(image => [image.object_key, image.url])))
     }
-  }, [open, product])
+  }, [categories, open, product])
 
   function setField<K extends keyof ProductPayload>(key: K, value: ProductPayload[K]) {
     setDraft(current => ({ ...current, [key]: value }))
@@ -191,7 +192,7 @@ export function ProductDialog({ api, open, product, onClose, onSaved }: ProductD
                   </Field>
                   <Field label="Категория" required>
                     <Select value={draft.category} onChange={(_, data) => setField('category', data.value)}>
-                      {[...new Set(['Кандуры', 'Джуббы', 'Тобы', 'Головные уборы', 'Брюки', 'Комплекты', draft.category])].filter(Boolean).map(value => <option key={value}>{value}</option>)}
+                      {[...new Set([...categories.map(category => category.name), draft.category])].filter(Boolean).map(value => <option key={value}>{value}</option>)}
                     </Select>
                   </Field>
                   <Field label="Цена, рубли" required>

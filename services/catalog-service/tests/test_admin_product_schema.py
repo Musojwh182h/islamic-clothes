@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.admin import AdminProductCreate
+from app.schemas.admin import AdminCategoryCreate, AdminProductCreate
 
 
 def product_payload() -> dict:
@@ -47,3 +47,9 @@ def test_product_payload_requires_at_least_one_variant() -> None:
 
     with pytest.raises(ValidationError):
         AdminProductCreate.model_validate(payload)
+
+
+def test_category_name_is_normalized() -> None:
+    category = AdminCategoryCreate.model_validate({"name": "  Верхняя   одежда  "})
+
+    assert category.name == "Верхняя одежда"

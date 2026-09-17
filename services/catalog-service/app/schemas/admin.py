@@ -80,6 +80,27 @@ class AdminStockUpdate(BaseModel):
     stock_quantity: int = Field(ge=0, le=1_000_000)
 
 
+class AdminProductVisibilityUpdate(BaseModel):
+    is_active: bool
+    expected_updated_at: datetime | None = None
+
+
+class AdminCategoryCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=80)
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        return " ".join(value.split())
+
+
+class AdminCategoryResponse(BaseModel):
+    id: UUID
+    name: str
+    is_active: bool
+    created_at: datetime
+
+
 class AdminProductVariantResponse(BaseModel):
     id: UUID
     sku: str

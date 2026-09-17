@@ -18,28 +18,32 @@ import {
   Text,
   Title1,
 } from '@fluentui/react-components'
-import { AddRegular, ArrowClockwiseRegular, DeleteRegular, EditRegular, SearchRegular } from '@fluentui/react-icons'
+import { AddRegular, ArrowClockwiseRegular, DeleteRegular, EditRegular, EyeOffRegular, EyeRegular, SearchRegular, TagRegular } from '@fluentui/react-icons'
 
 import { formatRoubles } from '../lib/format'
 import { AdminApi, ApiError } from '../services/api'
-import type { AdminProduct } from '../types'
+import type { AdminProduct, ProductCategory } from '../types'
+import { CategoryDialog } from './CategoryDialog'
 import { ProductDialog } from './ProductDialog'
 
 type ProductVisibility = 'active' | 'archived' | 'all'
 
 export function ProductsPage({ api }: { api: AdminApi }) {
   const [products, setProducts] = useState<AdminProduct[]>([])
+  const [categories, setCategories] = useState<ProductCategory[]>([])
   const [query, setQuery] = useState('')
   const [appliedQuery, setAppliedQuery] = useState('')
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
   const [selected, setSelected] = useState<AdminProduct | null>(null)
   const [visibility, setVisibility] = useState<ProductVisibility>('active')
   const [deleteTarget, setDeleteTarget] = useState<AdminProduct | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+  const [visibilityBusyId, setVisibilityBusyId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -57,6 +61,12 @@ export function ProductsPage({ api }: { api: AdminApi }) {
   }, [api, appliedQuery, visibility])
 
   useEffect(() => { void load() }, [load])
+
+  useEffect(() => {
+    api.listCategories()
+      .then(setCategories)
+      .catch(reason => setError(reason instanceof ApiError ? reason.message : 'Не удалось загрузить категории'))
+  }, [api])
 
   function openCreate() {
     setSelected(null)
@@ -88,16 +98,33 @@ export function ProductsPage({ api }: { api: AdminApi }) {
     }
   }
 
+  async function toggleVisibility(product: AdminProduct) {
+    if (visibilityBusyId) return
+    setVisibilityBusyId(product.id)
+    setError('')
+    try {
+      await api.setProductVisibility(product, !product.is_active)
+      await load()
+    } catch (reason) {
+      setError(reason instanceof ApiError ? reason.message : 'Не удалось изменить видимость товара')
+    } finally {
+      setVisibilityBusyId(null)
+    }
+  }
+
   return (
     <main className="page-shell">
       <header className="page-header">
         <div>
           <Title1>Товары</Title1>
           <Text block className="muted-copy">
-            {total} {visibility === 'archived' ? 'товаров в архиве' : visibility === 'all' ? 'товаров всего' : 'активных товаров'}
+            {total} {visibility === 'archived' ? 'скрытых товаров' : visibility === 'all' ? 'товаров всего' : 'товаров на сайте'}
           </Text>
         </div>
-        <Button appearance="primary" icon={<AddRegular />} onClick={openCreate}>Добавить товар</Button>
+        <div className="page-header-actions">
+          <Button appearance="secondary" icon={<TagRegular />} onClick={() => setCategoryDialogOpen(true)}>Добавить категорию</Button>
+          <Button appearance="primary" icon={<AddRegular />} onClick={openCreate} disabled={categories.length === 0}>Добавить товар</Button>
+        </div>
       </header>
 
       <section className="toolbar" aria-label="Фильтры товаров">
@@ -115,7 +142,7 @@ export function ProductsPage({ api }: { api: AdminApi }) {
             onChange={event => setVisibility(event.target.value as ProductVisibility)}
           >
             <option value="active">Активные товары</option>
-            <option value="archived">Архив</option>
+            <option value="archived">Скрытые товары</option>
             <option value="all">Все товары</option>
           </Select>
         </Field>
@@ -130,10 +157,10 @@ export function ProductsPage({ api }: { api: AdminApi }) {
           <TableSkeleton />
         ) : products.length === 0 ? (
           <div className="empty-state">
-            <Text weight="semibold" size={500}>{visibility === 'archived' ? 'Архив пуст' : 'Товары не найдены'}</Text>
+            <Text weight="semibold" size={500}>{visibility === 'archived' ? 'Скрытых товаров нет' : 'Товары не найдены'}</Text>
             <Text block className="muted-copy">
               {visibility === 'archived'
-                ? 'Удалённые товары появятся здесь и останутся доступными для восстановления.'
+                ? 'Скрытые и удалённые товары появятся здесь. Их можно отредактировать или снова показать на сайте.'
                 : 'Измените запрос или добавьте первую позицию.'}
             </Text>
             {visibility !== 'archived' && (
@@ -184,6 +211,14 @@ export function ProductsPage({ api }: { api: AdminApi }) {
                       </TableCell>
                       <TableCell>
                         <div className="table-actions">
+                          <Button
+                            appearance="subtle"
+                            icon={product.is_active ? <EyeOffRegular /> : <EyeRegular />}
+                            disabled={visibilityBusyId === product.id}
+                            onClick={() => void toggleVisibility(product)}
+                          >
+                            {visibilityBusyId === product.id ? 'Сохраняем…' : product.is_active ? 'Скрыть' : 'Показать'}
+                          </Button>
                           <Button appearance="subtle" icon={<EditRegular />} onClick={() => openEdit(product)}>
                             Изменить
                           </Button>
@@ -212,8 +247,19 @@ export function ProductsPage({ api }: { api: AdminApi }) {
         api={api}
         open={dialogOpen}
         product={selected}
+        categories={categories}
         onClose={() => setDialogOpen(false)}
         onSaved={() => { setDialogOpen(false); void load() }}
+      />
+
+      <CategoryDialog
+        api={api}
+        open={categoryDialogOpen}
+        onClose={() => setCategoryDialogOpen(false)}
+        onCreated={category => {
+          setCategories(current => [...current, category].sort((left, right) => left.name.localeCompare(right.name, 'ru')))
+          setCategoryDialogOpen(false)
+        }}
       />
 
       {deleteTarget && (

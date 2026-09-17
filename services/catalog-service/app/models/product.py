@@ -9,6 +9,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, TimestampMixin
 
 
+class ProductCategory(TimestampMixin, Base):
+    __tablename__ = "product_categories"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True, nullable=False)
+
+
 class Product(TimestampMixin, Base):
     __tablename__ = "products"
     __table_args__ = (CheckConstraint("price_kopecks >= 0", name="ck_products_price_non_negative"),)
@@ -17,7 +25,11 @@ class Product(TimestampMixin, Base):
     slug: Mapped[str] = mapped_column(String(120), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(180))
     description: Mapped[str] = mapped_column(Text, default="")
-    category: Mapped[str] = mapped_column(String(80), index=True)
+    category: Mapped[str] = mapped_column(
+        String(80),
+        ForeignKey("product_categories.name", onupdate="CASCADE", ondelete="RESTRICT"),
+        index=True,
+    )
     price_kopecks: Mapped[int] = mapped_column(Integer)
     color: Mapped[str] = mapped_column(String(80), default="")
     material: Mapped[str] = mapped_column(String(160), default="")

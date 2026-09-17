@@ -4,7 +4,8 @@ from datetime import UTC, datetime
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.product import AdminAuditLog, Product, ProductImage, ProductVariant
+from app.models.product import AdminAuditLog, Product, ProductCategory, ProductImage, ProductVariant
+from app.repositories.categories import CategoryRepository
 from app.repositories.products import ProductRepository
 from app.schemas.admin import (
     AdminProductCreate,
@@ -12,6 +13,7 @@ from app.schemas.admin import (
     AdminProductResponse,
     AdminProductUpdate,
     AdminProductVariantResponse,
+    AdminProductVisibilityUpdate,
 )
 from app.services.catalog import public_media_url
 
@@ -80,9 +82,13 @@ class ProductAdminService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.repository = ProductRepository(session)
+        self.category_repository = CategoryRepository(session)
 
     async def create(self, data: AdminProductCreate, actor_user_id: uuid.UUID) -> Product:
-        product = Product(**{field: getattr(data, field) for field in self.product_fields})
+        category = await self._require_category(data.category)
+        product_values = {field: getattr(data, field) for field in self.product_fields}
+        product_values["category"] = category.name
+        product = Product(**product_values)
         product.variants = [
             ProductVariant(
                 sku=item.sku,
@@ -113,9 +119,10 @@ class ProductAdminService:
             raise CatalogNotFound("Товар не найден")
         if data.expected_updated_at and product.updated_at != data.expected_updated_at:
             raise CatalogConflict("Товар уже изменён другим администратором. Обновите данные")
+        category = await self._require_category(data.category)
 
         for field in self.product_fields:
-            setattr(product, field, getattr(data, field))
+            setattr(product, field, category.name if field == "category" else getattr(data, field))
         self._sync_variants(product, data)
         self._sync_images(product, data)
         product.updated_at = datetime.now(UTC)
@@ -145,6 +152,32 @@ class ProductAdminService:
         )
         await self._commit_or_conflict()
         return await self._reload(product_id)
+
+    async def set_visibility(
+        self,
+        product_id: uuid.UUID,
+        data: AdminProductVisibilityUpdate,
+        actor_user_id: uuid.UUID,
+    ) -> Product:
+        product = await self.repository.get_admin_by_id(product_id, for_update=True)
+        if product is None:
+            raise CatalogNotFound("Товар не найден")
+        if data.expected_updated_at and product.updated_at != data.expected_updated_at:
+            raise CatalogConflict("Товар уже изменён другим администратором. Обновите список")
+        if data.is_active and not any(variant.is_active for variant in product.variants):
+            raise CatalogConflict("Перед публикацией включите хотя бы один размер товара")
+
+        previous = product.is_active
+        product.is_active = data.is_active
+        product.updated_at = datetime.now(UTC)
+        self._audit(
+            actor_user_id,
+            "catalog.product_visibility_changed",
+            product.id,
+            {"from": previous, "to": data.is_active},
+        )
+        await self._commit_or_conflict()
+        return await self._reload(product.id)
 
     async def delete(self, product_id: uuid.UUID, actor_user_id: uuid.UUID) -> None:
         """Archive a product while preserving references from historical orders."""
@@ -243,3 +276,9 @@ class ProductAdminService:
         if product is None:
             raise CatalogNotFound("Товар не найден")
         return product
+
+    async def _require_category(self, name: str) -> ProductCategory:
+        category = await self.category_repository.get_active_by_name(name)
+        if category is None:
+            raise CatalogConflict("Категория не найдена. Сначала добавьте её в админке")
+        return category

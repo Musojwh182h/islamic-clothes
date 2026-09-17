@@ -4,7 +4,7 @@ import uuid
 from sqlalchemy import select
 
 from app.db.session import AsyncSessionLocal, engine
-from app.models.product import Product, ProductImage, ProductVariant
+from app.models.product import Product, ProductCategory, ProductImage, ProductVariant
 
 PRODUCTS = [
     {
@@ -75,6 +75,11 @@ async def seed() -> None:
         existing = await session.scalar(select(Product.id).limit(1))
         if existing:
             return
+        session.add_all(
+            ProductCategory(name=name)
+            for name in sorted({data["category"] for data in PRODUCTS})
+        )
+        await session.flush()
         for data in PRODUCTS:
             product_id = uuid.UUID(data["id"])
             product = Product(

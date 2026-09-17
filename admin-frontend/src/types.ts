@@ -60,6 +60,13 @@ export type ProductPage = {
   limit: number
 }
 
+export type ProductCategory = {
+  id: string
+  name: string
+  is_active: boolean
+  created_at: string
+}
+
 export type MediaObject = {
   object_key: string
   url: string
