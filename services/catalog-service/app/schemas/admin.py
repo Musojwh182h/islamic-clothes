@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -35,6 +36,7 @@ class AdminProductPayload(BaseModel):
     name: str = Field(min_length=2, max_length=180)
     description: str = Field(default="", max_length=5000)
     category: str = Field(min_length=2, max_length=80)
+    audience: Literal["men", "women", "unisex"]
     price_kopecks: int = Field(ge=0, le=2_000_000_000)
     color: str = Field(default="", max_length=80)
     material: str = Field(default="", max_length=160)
@@ -124,6 +126,7 @@ class AdminProductResponse(BaseModel):
     name: str
     description: str
     category: str
+    audience: Literal["men", "women", "unisex"]
     price_kopecks: int
     color: str
     material: str

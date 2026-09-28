@@ -47,6 +47,7 @@ function initialPayload(product: AdminProduct | null, categories: ProductCategor
       name: product.name,
       description: product.description,
       category: product.category,
+      audience: product.audience,
       price_kopecks: product.price_kopecks,
       color: product.color,
       material: product.material,
@@ -63,6 +64,7 @@ function initialPayload(product: AdminProduct | null, categories: ProductCategor
     name: '',
     description: '',
     category: categories[0]?.name ?? '',
+    audience: 'men',
     price_kopecks: 0,
     color: '',
     material: '',
@@ -193,6 +195,13 @@ export function ProductDialog({ api, open, product, categories, onClose, onSaved
                   <Field label="Категория" required>
                     <Select value={draft.category} onChange={(_, data) => setField('category', data.value)}>
                       {[...new Set([...categories.map(category => category.name), draft.category])].filter(Boolean).map(value => <option key={value}>{value}</option>)}
+                    </Select>
+                  </Field>
+                  <Field label="Раздел" required hint="Определяет, в какой витрине будет показан товар">
+                    <Select value={draft.audience} onChange={(_, data) => setField('audience', data.value as ProductPayload['audience'])}>
+                      <option value="men">Мужская одежда</option>
+                      <option value="women">Женская одежда</option>
+                      <option value="unisex">Для всех</option>
                     </Select>
                   </Field>
                   <Field label="Цена, рубли" required>

@@ -3,6 +3,7 @@ export type Product = {
   slug: string
   name: string
   category: string
+  audience: 'men' | 'women' | 'unisex'
   price: number
   sizes: string[]
   image: string

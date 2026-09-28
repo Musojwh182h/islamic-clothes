@@ -19,7 +19,10 @@ class ProductCategory(TimestampMixin, Base):
 
 class Product(TimestampMixin, Base):
     __tablename__ = "products"
-    __table_args__ = (CheckConstraint("price_kopecks >= 0", name="ck_products_price_non_negative"),)
+    __table_args__ = (
+        CheckConstraint("price_kopecks >= 0", name="ck_products_price_non_negative"),
+        CheckConstraint("audience IN ('men', 'women', 'unisex')", name="ck_products_audience"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     slug: Mapped[str] = mapped_column(String(120), unique=True, index=True)
@@ -30,6 +33,7 @@ class Product(TimestampMixin, Base):
         ForeignKey("product_categories.name", onupdate="CASCADE", ondelete="RESTRICT"),
         index=True,
     )
+    audience: Mapped[str] = mapped_column(String(16), default="men", server_default="men", index=True)
     price_kopecks: Mapped[int] = mapped_column(Integer)
     color: Mapped[str] = mapped_column(String(80), default="")
     material: Mapped[str] = mapped_column(String(160), default="")

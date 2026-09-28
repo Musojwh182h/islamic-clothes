@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -16,6 +17,7 @@ class ProductPreview(BaseModel):
     name: str
     description: str
     category: str
+    audience: Literal["men", "women", "unisex"]
     price_kopecks: int = Field(ge=0, description="Цена в копейках")
     color: str
     material: str

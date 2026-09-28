@@ -11,7 +11,7 @@ class ProductRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def list_active(self, category: str | None = None) -> list[Product]:
+    async def list_active(self, category: str | None = None, audience: str | None = None) -> list[Product]:
         statement = (
             select(Product)
             .where(Product.is_active.is_(True))
@@ -20,6 +20,8 @@ class ProductRepository:
         )
         if category:
             statement = statement.where(Product.category == category)
+        if audience:
+            statement = statement.where(Product.audience.in_((audience, "unisex")))
         result = await self.session.scalars(statement)
         return list(result.unique())
 

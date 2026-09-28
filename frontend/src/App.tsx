@@ -13,6 +13,7 @@ import { createOrder, OrderError, type DeliveryDetails } from './services/orders
 const CART_STORAGE_KEY = 'sabr-cart-v1'
 
 type StoredCartItem = { id: string; size: string; quantity: number }
+type AudienceFilter = 'all' | 'men' | 'women'
 
 function loadCart(products: Product[]): CartItem[] {
   try {
@@ -38,6 +39,7 @@ function loadCart(products: Product[]): CartItem[] {
 }
 
 export default function App() {
+  const [activeAudience, setActiveAudience] = useState<AudienceFilter>('all')
   const [activeCategory, setActiveCategory] = useState('Все')
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([])
   const [catalogReady, setCatalogReady] = useState(false)
@@ -62,13 +64,16 @@ export default function App() {
   const shownProducts = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLocaleLowerCase('ru-RU')
     return catalogProducts.filter(product => {
+      const matchesAudience = activeAudience === 'all' || product.audience === activeAudience || product.audience === 'unisex'
       const matchesCategory = activeCategory === 'Все' || product.category === activeCategory
       const matchesName = !normalizedQuery || product.name.toLocaleLowerCase('ru-RU').includes(normalizedQuery)
-      return matchesCategory && matchesName
+      return matchesAudience && matchesCategory && matchesName
     })
-  }, [activeCategory, catalogProducts, searchQuery])
+  }, [activeAudience, activeCategory, catalogProducts, searchQuery])
   const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0)
-  const categories = ['Все', ...new Set(catalogProducts.map(product => product.category))]
+  const categories = ['Все', ...new Set(catalogProducts
+    .filter(product => activeAudience === 'all' || product.audience === activeAudience || product.audience === 'unisex')
+    .map(product => product.category))]
 
   useEffect(() => {
     if (!catalogReady) return
@@ -120,6 +125,13 @@ export default function App() {
   function toggleSearch() {
     if (isSearchOpen) setSearchQuery('')
     setSearchOpen(current => !current)
+  }
+
+  function selectAudience(audience: AudienceFilter) {
+    setActiveAudience(audience)
+    setActiveCategory('Все')
+    setMenuOpen(false)
+    window.requestAnimationFrame(() => document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
 
   function openCheckout() {
@@ -186,7 +198,8 @@ export default function App() {
       <header className="site-header">
         <Logo />
         <nav className="desktop-nav" aria-label="Основная навигация">
-          <a href="#catalog">Каталог</a>
+          <button type="button" onClick={() => selectAudience('men')}>Мужчинам</button>
+          <button type="button" onClick={() => selectAudience('women')}>Женщинам</button>
           <button className="orders-nav-button" type="button" onClick={openOrders}><PackageSearch size={15} /> Мои заказы</button>
         </nav>
         <div className="header-actions">
@@ -213,20 +226,25 @@ export default function App() {
           <button className="bag-button" onClick={() => setCartOpen(true)} aria-label={`Корзина, товаров: ${itemCount}`}><ShoppingBag size={20} /><span>{itemCount}</span></button>
           <button className="icon-button menu-button" onClick={() => setMenuOpen(!isMenuOpen)} aria-label="Открыть меню">{isMenuOpen ? <X /> : <Menu />}</button>
         </div>
-        {isMenuOpen && <nav className="mobile-nav" aria-label="Мобильная навигация"><a href="#catalog" onClick={() => setMenuOpen(false)}>Каталог</a><button type="button" onClick={openOrders}><PackageSearch size={16} /> Мои заказы</button><button type="button" onClick={() => { setCartOpen(true); setMenuOpen(false) }}>Корзина ({itemCount})</button></nav>}
+        {isMenuOpen && <nav className="mobile-nav" aria-label="Мобильная навигация"><button type="button" onClick={() => selectAudience('men')}>Мужчинам</button><button type="button" onClick={() => selectAudience('women')}>Женщинам</button><button className="orders-nav-button" type="button" onClick={openOrders}><PackageSearch size={16} /> Мои заказы</button><button type="button" onClick={() => { setCartOpen(true); setMenuOpen(false) }}>Корзина ({itemCount})</button></nav>}
       </header>
 
       <section className="hero" aria-labelledby="hero-title">
         <div className="hero-art" role="img" aria-label="Мужчина в светлой традиционной одежде" />
         <div className="hero-overlay" />
-        <div className="hero-content"><p className="eyebrow light">КОЛЛЕКЦИЯ ОСЕНЬ / ЗИМА 2026</p><h1 id="hero-title">Тишина в<br /><em>каждой</em> линии.</h1><p className="hero-description">Одежда, в которой достоинство чувствуется без лишних слов.</p><a className="primary-button light-button" href="#catalog">Смотреть коллекцию <ArrowDownRight size={18} /></a></div>
+        <div className="hero-content"><p className="eyebrow light">КОЛЛЕКЦИЯ ОСЕНЬ / ЗИМА 2026</p><h1 id="hero-title">Скромность в<br /><em>каждой</em> линии.</h1><p className="hero-description">Исламская одежда для мужчин и женщин, в которой достоинство чувствуется без лишних слов.</p><a className="primary-button light-button" href="#catalog">Смотреть коллекции <ArrowDownRight size={18} /></a></div>
         <div className="hero-caption"><span>01 — 04</span><span>Создано для пути</span></div>
       </section>
 
-      <section className="intro-strip"><p>Осознанный гардероб для <span>настоящего мужчины.</span></p><div>Натуральные ткани <i /> Свободный крой <i /> Сделано с уважением</div></section>
+      <section className="intro-strip"><p>Осознанный гардероб <span>для него и для неё.</span></p><div>Натуральные ткани <i /> Свободный крой <i /> Сделано с уважением</div></section>
 
       <section id="catalog" className="catalog section-shell" aria-labelledby="catalog-title">
-        <div className="section-heading"><div><p className="eyebrow">ВИТРИНА</p><h2 id="catalog-title">Выберите своё.</h2></div><p>Лаконичные силуэты, которые легко становятся частью повседневной жизни.</p></div>
+        <div className="section-heading"><div><p className="eyebrow">ВИТРИНА</p><h2 id="catalog-title">Для него. Для неё.</h2></div><p>Сдержанные мужские и женские образы для повседневной жизни и особых случаев.</p></div>
+        <div className="audience-tabs" aria-label="Раздел каталога">
+          <button type="button" className={activeAudience === 'all' ? 'active' : ''} onClick={() => selectAudience('all')}>Все</button>
+          <button type="button" className={activeAudience === 'men' ? 'active' : ''} onClick={() => selectAudience('men')}>Мужчинам</button>
+          <button type="button" className={activeAudience === 'women' ? 'active' : ''} onClick={() => selectAudience('women')}>Женщинам</button>
+        </div>
         <div className="catalog-tools"><div className="filters" aria-label="Категории">{categories.map(category => <button key={category} className={category === activeCategory ? 'active' : ''} onClick={() => setActiveCategory(category)}>{category}</button>)}</div></div>
         {catalogError && <p role="alert">{catalogError}</p>}
         {!catalogReady && !catalogError && <p role="status">Загружаем каталог…</p>}
@@ -235,7 +253,7 @@ export default function App() {
       </section>
 
 
-      <footer className="site-footer"><Logo /><p>Мужская исламская одежда с достоинством.</p><div><a href="#top">Telegram</a><a href="#top">Instagram</a><span>© 2026 SABR</span></div></footer>
+      <footer className="site-footer"><Logo /><p>Исламская одежда для мужчин и женщин.</p><div><a href="#top">Telegram</a><a href="#top">Instagram</a><span>© 2026 SABR</span></div></footer>
       {notice && <div className="toast" role="status">{notice}</div>}
       <CartDrawer items={cartItems} isOpen={isCartOpen} onClose={() => setCartOpen(false)} onChangeQuantity={changeQuantity} onRemove={removeItem} onCheckout={openCheckout} />
       <CheckoutDialog items={cartItems} isOpen={isCheckoutOpen} orderNumber={orderNumber} busy={orderBusy} error={orderError} totalSaved={orderTotal} phone="" onBack={() => { if (!orderBusy) { setCheckoutOpen(false); setCartOpen(true) } }} onClose={() => { if (!orderBusy) setCheckoutOpen(false) }} onSubmit={placeOrder} />

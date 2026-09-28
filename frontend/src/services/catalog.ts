@@ -7,6 +7,7 @@ type ApiProduct = {
   slug: string
   name: string
   category: string
+  audience: 'men' | 'women' | 'unisex'
   price_kopecks: number
   sizes: string[]
   image: string
@@ -24,6 +25,7 @@ export async function fetchProducts(): Promise<Product[]> {
     slug: product.slug,
     name: product.name,
     category: product.category,
+    audience: product.audience,
     price: product.price_kopecks / 100,
     sizes: product.sizes,
     image: product.image,

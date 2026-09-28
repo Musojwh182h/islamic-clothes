@@ -24,6 +24,7 @@ def to_product_preview(product: Product) -> ProductPreview:
         name=product.name,
         description=product.description,
         category=product.category,
+        audience=product.audience,
         price_kopecks=product.price_kopecks,
         color=product.color,
         material=product.material,

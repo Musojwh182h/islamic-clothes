@@ -30,12 +30,15 @@ export type ProductImage = {
   sort_order: number
 }
 
+export type ProductAudience = 'men' | 'women' | 'unisex'
+
 export type AdminProduct = {
   id: string
   slug: string
   name: string
   description: string
   category: string
+  audience: ProductAudience
   price_kopecks: number
   color: string
   material: string

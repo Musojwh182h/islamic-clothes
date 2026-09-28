@@ -28,6 +28,12 @@ import { ProductDialog } from './ProductDialog'
 
 type ProductVisibility = 'active' | 'archived' | 'all'
 
+const audienceLabels = {
+  men: 'Мужская',
+  women: 'Женская',
+  unisex: 'Для всех',
+} as const
+
 export function ProductsPage({ api }: { api: AdminApi }) {
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [categories, setCategories] = useState<ProductCategory[]>([])
@@ -174,6 +180,7 @@ export function ProductsPage({ api }: { api: AdminApi }) {
                 <TableRow>
                   <TableHeaderCell>Товар</TableHeaderCell>
                   <TableHeaderCell>Категория</TableHeaderCell>
+                  <TableHeaderCell>Раздел</TableHeaderCell>
                   <TableHeaderCell>Цена</TableHeaderCell>
                   <TableHeaderCell>Размеры</TableHeaderCell>
                   <TableHeaderCell>Остаток</TableHeaderCell>
@@ -201,6 +208,7 @@ export function ProductsPage({ api }: { api: AdminApi }) {
                         </div>
                       </TableCell>
                       <TableCell>{product.category}</TableCell>
+                      <TableCell>{audienceLabels[product.audience]}</TableCell>
                       <TableCell className="numeric-cell">{formatRoubles(product.price_kopecks)}</TableCell>
                       <TableCell>{variants.map(variant => variant.size).join(', ') || 'Нет'}</TableCell>
                       <TableCell className="numeric-cell stock-cell" data-low={stock <= 5}>{stock}</TableCell>

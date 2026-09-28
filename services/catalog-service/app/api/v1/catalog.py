@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,9 +14,10 @@ router = APIRouter(prefix="/catalog", tags=["catalog"])
 @router.get("/products", response_model=list[ProductPreview])
 async def list_products(
     category: str | None = Query(default=None, max_length=80),
+    audience: Literal["men", "women"] | None = Query(default=None),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[ProductPreview]:
-    products = await ProductRepository(session).list_active(category)
+    products = await ProductRepository(session).list_active(category, audience)
     return [to_product_preview(product) for product in products]
 
 

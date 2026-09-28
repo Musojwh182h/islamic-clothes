@@ -29,7 +29,7 @@ function errorMessage(payload: unknown, fallback: string): string {
   const detail = payload.detail
   if (typeof detail === 'string') return detail
   if (Array.isArray(detail)) {
-    const labels: Record<string, string> = { slug: 'Адрес товара', name: 'Название', category: 'Категория', sku: 'Артикул', size: 'Размер', stock_quantity: 'Количество', price_kopecks: 'Цена', images: 'Фотографии', variants: 'Размеры', object_key: 'Фотография', comment: 'Комментарий' }
+    const labels: Record<string, string> = { slug: 'Адрес товара', name: 'Название', category: 'Категория', audience: 'Раздел', sku: 'Артикул', size: 'Размер', stock_quantity: 'Количество', price_kopecks: 'Цена', images: 'Фотографии', variants: 'Размеры', object_key: 'Фотография', comment: 'Комментарий' }
     return detail.map(item => {
       const field = Array.isArray(item?.loc) ? String(item.loc.at(-1)) : ''
       const label = labels[field] ?? 'Данные формы'

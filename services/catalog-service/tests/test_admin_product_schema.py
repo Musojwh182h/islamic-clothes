@@ -9,6 +9,7 @@ def product_payload() -> dict:
         "slug": "classic-thobe",
         "name": "Classic thobe",
         "category": "Thobes",
+        "audience": "men",
         "price_kopecks": 899_000,
         "variants": [
             {
@@ -53,3 +54,11 @@ def test_category_name_is_normalized() -> None:
     category = AdminCategoryCreate.model_validate({"name": "  Верхняя   одежда  "})
 
     assert category.name == "Верхняя одежда"
+
+
+def test_product_payload_rejects_unknown_audience() -> None:
+    payload = product_payload()
+    payload["audience"] = "children"
+
+    with pytest.raises(ValidationError):
+        AdminProductCreate.model_validate(payload)
